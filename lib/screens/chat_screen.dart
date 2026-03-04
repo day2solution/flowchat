@@ -1,27 +1,24 @@
-import 'package:flowchat/config/Utility.dart';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:flowchat/config/environment.dart';
 import 'package:flowchat/config/typing_indicator.dart';
-import 'package:flowchat/constant.dart';
 import 'package:flowchat/models/ChatComposerModel.dart';
 import 'package:flowchat/models/my_account.dart';
 import 'package:flowchat/models/recent_chat.dart';
 import 'package:flowchat/services/chat_db.dart';
-import 'package:flutter/material.dart';
+import 'package:flowchat/util/CommonUtil.dart';
 import '../models/chat_message.dart';
 import '../models/user.dart';
 import '../services/chat_repository.dart';
 import '../services/web_socket_service.dart';
-import '../widgets/chat_bubble.dart';
 import '../widgets/composer.dart';
 
 class ChatScreen extends StatefulWidget {
   final MyAccount myAccount;
   final User peer;
 
-  const ChatScreen({
-    required this.myAccount,
-    required this.peer,
-    super.key,
-  });
+  const ChatScreen({required this.myAccount, required this.peer, super.key});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -32,31 +29,45 @@ class _ChatScreenState extends State<ChatScreen> {
   final ChatRepository _repo = ChatRepository();
   List<ChatMessage> _messages = [];
   bool _peerTyping = false;
+  static double? screenWidth;
+  static double? screenHeight;
+  static MediaQueryData? _mediaQueryData;
+
+  // --- Theme Colors from Profile/Composer ---
+  final Color coralColor = const Color(0xFFFF7F50);
+  final Color purpleColor = const Color(0xFF6C63FF);
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _initChat();
+  }
+
+  void _initChat() {
+    _loadMessages();
     _repo.onIncoming(_handleIncoming);
     _repo.onMsgStatus(_handleStatusUpdate);
     WebSocketService().onTyping(_handleTyping);
   }
 
+  // --- Logic Implementations ---
+
+  Future<void> _loadMessages() async {
+    final msgs = await _repo.loadMessages(widget.peer.contactNo ?? "");
+    if (mounted) setState(() => _messages = msgs);
+  }
+
   void _handleIncoming(ChatMessage m) {
-    if (!mounted) return;
-    if (m.senderId == widget.peer.contactNo) {
-      setState(() => _messages.add(m));
-      _scrollToEnd();
-      saveLastMessage(widget.peer.contactNo!, widget.peer.name, m.content, widget.myAccount.contactNo);
-      WebSocketService().sendReadAck(m.id, m.senderId);
-    }
+    if (!mounted || m.senderId != widget.peer.contactNo) return;
+    setState(() => _messages.add(m));
+    _saveToRecent(m.content);
+    WebSocketService().sendReadAck(m.id, m.senderId);
   }
 
   void _handleStatusUpdate(String msgId, String status) {
+    if (!mounted) return;
     final index = _messages.indexWhere((m) => m.id == msgId);
-    if (index != -1) {
-      setState(() => _messages[index].status = status);
-    }
+    if (index != -1) setState(() => _messages[index].status = status);
   }
 
   void _handleTyping(String senderId) {
@@ -67,12 +78,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  Future<void> _load() async {
-    final msgs = await _repo.loadMessages(widget.peer.contactNo ?? "");
-    if (mounted) setState(() => _messages = msgs);
-    _scrollToEnd();
-  }
-
   void _send(ChatComposerModel model) {
     final isText = model.type == MessageType.text;
     _repo.sendText(
@@ -81,13 +86,19 @@ class _ChatScreenState extends State<ChatScreen> {
       model.message,
       widget.peer.contactNo ?? "",
     );
-    saveLastMessage(
-        widget.peer.contactNo!,
-        widget.peer.name,
-        isText ? model.message : "📷 Image",
-        widget.peer.contactNo
+    _saveToRecent(isText ? model.message : "📷 Image");
+    _loadMessages(); // Refresh to show the message sent locally
+  }
+
+  void _saveToRecent(String lastMsg) async {
+    final chat = RecentChat(
+      contactNo: widget.peer.contactNo!,
+      name: widget.peer.name,
+      lastMessage: lastMsg,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      profileImage: widget.peer.contactNo,
     );
-    _load();
+    await ChatDb().upsertChat(chat);
   }
 
   void _onTyping() {
@@ -96,185 +107,349 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _scrollToEnd() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+  @override
+  Widget build(BuildContext context) {
+    _mediaQueryData = MediaQuery.of(context);
+    screenWidth = _mediaQueryData!.size.width;
+    screenHeight = _mediaQueryData!.size.height;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        toolbarHeight: screenWidth! / 6,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: _buildUniqueHeader(),
+        automaticallyImplyLeading: false,
+      ),
+
+      body: Column(
+        children: [
+          // _buildUniqueHeader(),
+          Expanded(
+            child: Container(
+              color: const Color(0xFFF8F9FD),
+              // Soft background matching Profile
+              child: ListView.builder(
+                controller: _scrollController,
+                reverse: true,
+                // Key for chat: latest message at bottom
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth!/40,
+                  vertical: screenWidth!/70,
+                ),
+                itemCount: _messages.length,
+                itemBuilder: (ctx, i) {
+                  final message = _messages[_messages.length - 1 - i];
+                  return _buildSocialMessageBubble(message);
+                },
+              ),
+            ),
+          ),
+          if (_peerTyping)
+            Padding(
+              padding: EdgeInsets.only(left: screenWidth!/80, bottom: screenWidth!/100),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TypingIndicator(),
+              ),
+            ),
+          // Integrating your custom Composer
+          Composer(onSend: _send, onTyping: _onTyping),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUniqueHeader() {
+    return Stack(
+      children: [
+        Container(
+          height: screenWidth! / 3,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [purpleColor, coralColor], // Profile screen combination
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(60),
+            ),
+          ),
+        ),
+        Positioned(
+          top: -30,
+          right: -30,
+          child: CircleAvatar(
+            radius: 60,
+            backgroundColor: Colors.white.withOpacity(0.1),
+          ),
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                _buildHeaderAvatar(),
+                const SizedBox(width: 15),
+                _buildHeaderTitle(),
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeaderAvatar() {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+      ),
+      child: CircleAvatar(
+        radius: 22,
+        backgroundColor: Colors.grey.shade100,
+        backgroundImage: NetworkImage(
+          "${Environment.hostApiUrl}/uploads/profiles/${widget.peer.contactNo!}.gif",
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderTitle() {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.peer.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          Text(
+            _peerTyping
+                ? "typing..."
+                : (widget.peer.online ? "Online" : "Offline"),
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSocialMessageBubble(ChatMessage message) {
+    final bool isMe = message.senderId == widget.myAccount.contactNo;
+    final bool isImage = CommonUtil.isBase64(message.content);
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment: isMe
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: isImage
+                ? const EdgeInsets.all(5)
+                : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
+            decoration: BoxDecoration(
+              // SENDER: Matches your Composer/Profile Button Gradient
+              // RECEIVER: Matches Profile Input Field (White)
+              gradient: isMe
+                  ? LinearGradient(
+                      colors: [coralColor, const Color(0xFFFF4D4D)],
+                    )
+                  : null,
+              color: isMe ? null : Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(22),
+                topRight: const Radius.circular(22),
+                bottomLeft: Radius.circular(isMe ? 22 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 22),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isMe
+                      ? coralColor.withOpacity(0.3)
+                      : Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                GestureDetector(
+                  onTap: isImage
+                      ? () => showImageDialog(
+                          message.content,
+                          "Photo",
+                          context,
+                          "image",
+                        )
+                      : null,
+                  child: isImage
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: CommonUtil.getImage(message.content, context),
+                        )
+                      : Text(
+                          message.content,
+                          style: TextStyle(
+                            color: isMe ? Colors.white : Colors.black87,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      DateFormat('hh:mm a').format(
+                        DateTime.fromMillisecondsSinceEpoch(
+                          message.timestamp.millisecond,
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isMe ? Colors.white70 : Colors.grey,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (isMe) const SizedBox(width: 4),
+                    _buildStatusIcon(message.status),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void showImageDialog(
+    String imagePath,
+    String? imageName,
+    BuildContext context,
+    String fileType,
+  ) {
+    showDialog(
+      context: context,
+      // use rootNavigator to ensure it sits on top of everything
+      useRootNavigator: true,
+      builder: (dialogContext) => Dialog(
+        // Rename context to dialogContext
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        // Make it full screen for better viewing
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 1. Zoomable Image
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: CommonUtil.getImageInDialogue(imagePath, dialogContext),
+            ),
+
+            // 2. Stylish Close Button (Top Right)
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.4),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                  // ✅ Use dialogContext to specifically pop the Dialog
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
+              ),
+            ),
+
+            // 3. Optional: Image Label (Bottom)
+            if (imageName != null)
+              Positioned(
+                bottom: 40,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    imageName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusIcon(String status) {
+    final Color readColor = Colors.blueGrey;
+
+    switch (status) {
+      case 'SENT':
+        return Icon(Icons.done_rounded, size: 14, color: Colors.white70);
+      case 'DELIVERED':
+        return Icon(Icons.done_all_rounded, size: 14, color: Colors.white70);
+      case 'READ':
+        return Icon(Icons.done_all_rounded, size: 14, color: readColor);
+      default:
+        return const SizedBox.shrink();
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final peer = widget.peer;
-    final primaryColor = Theme.of(context).primaryColor;
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        toolbarHeight: 75,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [primaryColor, primaryColor.withOpacity(0.8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        elevation: 0,
-        leadingWidth: 40,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          children: [
-            _buildAvatar(peer),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    peer.name,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  Text(
-                    _peerTyping ? "typing..." : (peer.online ? "online" : "offline"),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _peerTyping || peer.online ? Colors.greenAccent : Colors.white70,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.videocam_outlined, color: Colors.white)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.phone_outlined, color: Colors.white)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert, color: Colors.white)),
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F9FD), // Soft background color
-          image: DecorationImage(
-            image: const AssetImage("assets/chat_bg.png"),
-            opacity: 0.04, // Very faint pattern
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
-                itemCount: _messages.length,
-                itemBuilder: (_, i) {
-                  final m = _messages[i];
-                  final isMe = m.senderId == widget.myAccount.contactNo;
-                  return ChatBubble(msg: m, isMe: isMe);
-                },
-              ),
-            ),
-            if (_peerTyping)
-            // --- Enhanced Typing Indicator with Animation ---
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.5),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  );
-                },
-                child: _peerTyping
-                    ? const Padding(
-                  key: ValueKey('typing_indicator'),
-                  padding: EdgeInsets.only(left: 8, bottom: 12),
-                  child: TypingIndicator(),
-                )
-                    : const SizedBox.shrink(key: ValueKey('no_typing')),
-              ),
-
-            // Bottom Input Area with a "Floating" look
-            Container(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 30),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(25),
-                  topRight: Radius.circular(25),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -5),
-                  )
-                ],
-              ),
-              child: SafeArea(child: Composer(onSend: _send, onTyping: _onTyping)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAvatar(User peer) {
-    return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
-      ),
-      child: CircleAvatar(
-        radius: 20,
-        backgroundColor: Colors.white24,
-        child: ClipOval(
-          child: Image.network(
-            "${AppConstant.HOST}/uploads/profiles/${peer.contactNo!}.gif",
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              color: Utility().getRandomColor(),
-              alignment: Alignment.center,
-              child: Text(
-                  peer.name[0].toUpperCase(),
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> saveLastMessage(String contactNo, String name, String msg, String? profileImage) async {
-    final chat = RecentChat(
-      contactNo: contactNo,
-      name: name,
-      lastMessage: msg,
-      timestamp: DateTime.now().millisecondsSinceEpoch,
-      profileImage: profileImage,
-    );
-    await ChatDb().upsertChat(chat);
-  }
-
-  @override
   void dispose() {
-    debugPrint("ChatScreen dispose");
     _scrollController.dispose();
     super.dispose();
   }

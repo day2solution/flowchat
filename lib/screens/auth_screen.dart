@@ -1,3 +1,4 @@
+import 'package:flowchat/config/Logger.dart';
 import 'package:flutter/material.dart';
 // import 'package:uuid/uuid.dart';
 
@@ -15,7 +16,7 @@ class _AuthScreenState extends State<AuthScreen> {
   // final _uuid = const Uuid();
 
   void _login() {
-    debugPrint("here 2");
+    Logger.log("auth_screen","here 2");
     final loggesInUsername = _nameCtrl.text.trim();
     final loggedInContact = _contactNoCtrl.text.trim();
     if (loggesInUsername.isEmpty) return;

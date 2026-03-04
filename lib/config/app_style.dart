@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 class AppStyle {
   AppStyle._(); // this basically makes it so you can instantiate this class
-
+  static const MaterialColor secondaryColor = MaterialColor(
+    _companySecondaryColor,
+    <int, Color>{
+      500: Color(_companySecondaryColor),
+    },
+  );
   static const MaterialColor primaryColor = MaterialColor(
     _companyPrimaryColor,
     <int, Color>{
@@ -23,6 +28,7 @@ class AppStyle {
     },
   );
   static const int _companyPrimaryColor = 0xFFFF6B6B;
+  static const int _companySecondaryColor = 0xFFFFD93D;
   static getGap20(){
     return SizedBox(
       height: 20.0,

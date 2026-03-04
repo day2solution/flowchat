@@ -18,12 +18,12 @@ class CommonUtil {
   static double? screenHeight;
   static MediaQueryData? _mediaQueryData;
   File? selectedVideo;
+
   // VideoPlayerController? _controller;
 
   // static DateTime intToDate(int number){
   //   return new DateTime.fromMicrosecondsSinceEpoch(number*1000);
   // }
-
 
   static DateTime stringToDate(String date) {
     return new DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse(date);
@@ -35,7 +35,7 @@ class CommonUtil {
   }
 
   static getYYYYMMDDStringDate(String date) {
-    debugPrint('date=$date');
+    Logger.log("CommonUtil",'date=$date');
     DateTime dateTime = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse(date);
     DateFormat outputFormat = DateFormat('yyyy-MM-dd');
     String outputDate = outputFormat.format(dateTime);
@@ -85,7 +85,6 @@ class CommonUtil {
     return text;
   }
 
-
   static Widget showCircularProgressLoading(String msg, BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -95,28 +94,31 @@ class CommonUtil {
           child: CircularProgressIndicator(
             // backgroundColor: Colors.white,
             valueColor: AlwaysStoppedAnimation<Color>(
-                CompanyStyle.primaryColor[900]!),
+              CompanyStyle.primaryColor[900]!,
+            ),
             strokeWidth: 3,
           ),
         ),
-        !CommonUtil.isBlank(msg) ? Column(
-          children: [
-            const SizedBox(
-              height: 10,
-            ),
-            Text(msg,
-              style: TextStyle(fontSize: screenWidth! / 30,
-                  color: CompanyStyle.primaryColor),
-            )
-          ],
-        ) :
-        Container(),
+        !CommonUtil.isBlank(msg)
+            ? Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Text(
+                    msg,
+                    style: TextStyle(
+                      fontSize: screenWidth! / 30,
+                      color: CompanyStyle.primaryColor,
+                    ),
+                  ),
+                ],
+              )
+            : Container(),
       ],
     );
   }
 
   static String convertToTitleCase(String text) {
-    debugPrint('text to capitalize=$text');
+    Logger.log("CommonUtil",'text to capitalize=$text');
     if (isBlank(text)) {
       return "-";
     } else {
@@ -136,7 +138,7 @@ class CommonUtil {
   }
 
   static String convertToTitleCaseReturnDash(String text) {
-    debugPrint('text to capitalize=$text');
+    Logger.log("CommonUtil",'text to capitalize=$text');
     if (text == null) {
       return "-";
     }
@@ -146,7 +148,7 @@ class CommonUtil {
     }
     text = text.trim().replaceAll(RegExp(' +'), ' ');
     final List<String> words = text.split(' ');
-    debugPrint('words=$words');
+    Logger.log("CommonUtil",'words=$words');
     final capitalizedWords = words.map((word) {
       final String firstLetter = word.substring(0, 1).toUpperCase();
       final String remainingLetters = word.substring(1).toLowerCase();
@@ -166,7 +168,7 @@ class CommonUtil {
   // static Future<File> testCompressAndGetFile(File file) async {
   //   int imgQuality=100;
   //   double ogFileSize=file.lengthSync()/1024;
-  //   debugPrint("image original size in KB="+ogFileSize.toString()+" KB");
+  //   Logger.log("CommonUtil","image original size in KB="+ogFileSize.toString()+" KB");
   //
   //   if(ogFileSize>100 && ogFileSize<200){
   //     imgQuality=90;
@@ -181,15 +183,15 @@ class CommonUtil {
   //     imgQuality=30;
   //   }
   //   ogFileSize=ogFileSize/1024;
-  //   debugPrint("image original size in MB="+ogFileSize.toString()+" MB");
-  //   debugPrint('imgQuality=$imgQuality');
+  //   Logger.log("CommonUtil","image original size in MB="+ogFileSize.toString()+" MB");
+  //   Logger.log("CommonUtil",'imgQuality=$imgQuality');
   //   File compressedFile = await FlutterNativeImage.compressImage(file.path,
   //       quality: imgQuality, percentage: 100);
   //
   //   ogFileSize=compressedFile.lengthSync()/1024;
-  //   debugPrint("image compressed size in KB="+ogFileSize.toString()+" KB");
+  //   Logger.log("CommonUtil","image compressed size in KB="+ogFileSize.toString()+" KB");
   //   ogFileSize=ogFileSize/1024;
-  //   debugPrint("image compressed size in MB="+ogFileSize.toString()+" MB");
+  //   Logger.log("CommonUtil","image compressed size in MB="+ogFileSize.toString()+" MB");
   //   return compressedFile;
   // }
   static Widget getImageInDialogue(String base64String, BuildContext context) {
@@ -202,8 +204,8 @@ class CommonUtil {
       image = Base64Decoder().convert(finalImg);
       return Container(
         alignment: Alignment.center,
-        height: screenWidth!-40 ,
-        width: screenWidth!-40,
+        height: screenWidth! - 40,
+        width: screenWidth! - 40,
         child: Image.memory(
           image,
           alignment: Alignment.center,
@@ -214,12 +216,15 @@ class CommonUtil {
         ),
       );
       // Image.memory(image, width: screenWidth/4, height: screenWidth/4,fit: BoxFit.contain,)
-
     } else {
-      return Image.asset('assets/images/no_image.jpg', width: screenWidth! / 4,
-        height: screenWidth! / 4,);
+      return Image.asset(
+        'assets/images/no_image.jpg',
+        width: screenWidth! / 4,
+        height: screenWidth! / 4,
+      );
     }
   }
+
   static Widget getImage(String base64String, BuildContext context) {
     _mediaQueryData = MediaQuery.of(context);
     screenWidth = _mediaQueryData!.size.width;
@@ -242,15 +247,19 @@ class CommonUtil {
         ),
       );
       // Image.memory(image, width: screenWidth/4, height: screenWidth/4,fit: BoxFit.contain,)
-
     } else {
-      return Image.asset('assets/images/no_image.jpg', width: screenWidth! / 4,
-        height: screenWidth! / 4,);
+      return Image.asset(
+        'assets/images/no_image.jpg',
+        width: screenWidth! / 4,
+        height: screenWidth! / 4,
+      );
     }
   }
 
-  static Future<Widget> getImageXFile(XFile pickedFile,
-      BuildContext context) async {
+  static Future<Widget> getImageXFile(
+    XFile pickedFile,
+    BuildContext context,
+  ) async {
     // if (pickedFile != null) {
     File imageFile = File(pickedFile.path);
     List<int> imageBytes = await imageFile.readAsBytes(); // Convert to bytes
@@ -261,19 +270,16 @@ class CommonUtil {
   }
 
   static Uint8List decodeBase64(String base64Str) {
-    final pureBase64 = base64Str
-        .split(',')
-        .last;
+    final pureBase64 = base64Str.split(',').last;
     return base64Decode(pureBase64);
   }
 
-  static Widget getImageFromBase64FillSize22222(Uint8List imageBytes,
-      BuildContext context) {
+  static Widget getImageFromBase64FillSize22222(
+    Uint8List imageBytes,
+    BuildContext context,
+  ) {
     var image;
-    return Image.memory(
-      imageBytes,
-      fit: BoxFit.cover,
-    );
+    return Image.memory(imageBytes, fit: BoxFit.cover);
   }
 
   static Widget getImageFromStorage(String fileName) {
@@ -292,10 +298,12 @@ class CommonUtil {
     // );
   }
 
-  static Future<String> saveBase64Image(String base64String,
-      String fileName) async {
+  static Future<String> saveBase64Image(
+    String base64String,
+    String fileName,
+  ) async {
     try {
-      Logger.log("fileName=$fileName");
+      Logger.log("CommonUtil","fileName=$fileName");
 
       // Decode Base64 String
       Uint8List bytes = base64Decode(base64String);
@@ -308,15 +316,18 @@ class CommonUtil {
       File imgFile = File(filePath);
       await imgFile.writeAsBytes(bytes);
 
-      Logger.log('Image saved at: $filePath');
+      Logger.log("CommonUtil",'Image saved at: $filePath');
       return filePath;
     } catch (e) {
-      Logger.log('Error saving image: $e');
+      Logger.log("CommonUtil",'Error saving image: $e');
       return '';
     }
   }
-  static Future<String> saveBase64video(String base64String,
-      String fileName) async {
+
+  static Future<String> saveBase64video(
+    String base64String,
+    String fileName,
+  ) async {
     try {
       // Decode Base64 String
       Uint8List bytes = base64Decode(base64String);
@@ -325,21 +336,22 @@ class CommonUtil {
       Directory dir = await getApplicationDocumentsDirectory();
       String filePath = '${dir.path}/$fileName';
 
-
       // Write bytes to file
       File imgFile = File(filePath);
       await imgFile.writeAsBytes(bytes);
 
-      Logger.log('video saved at: $filePath');
+      Logger.log("CommonUtil",'video saved at: $filePath');
       return filePath;
     } catch (e) {
-      Logger.log('Error saving video: $e');
+      Logger.log("CommonUtil",'Error saving video: $e');
       return '';
     }
   }
 
-  static Widget getImageFromBase64FillSize(String base64String,
-      BuildContext context) {
+  static Widget getImageFromBase64FillSize(
+    String base64String,
+    BuildContext context,
+  ) {
     var image;
     if (base64String != null && base64String != "") {
       String finalImg = base64String.split(",")[1];
@@ -362,8 +374,11 @@ class CommonUtil {
     }
   }
 
-  static Widget getImageFromBase64CustSize(String base64String,
-      double screenWidth, double screenHeight) {
+  static Widget getImageFromBase64CustSize(
+    String base64String,
+    double screenWidth,
+    double screenHeight,
+  ) {
     var image;
     if (base64String != null && base64String != "") {
       String finalImg = base64String.split(",")[1];
@@ -387,29 +402,30 @@ class CommonUtil {
   }
 
   static bool isValidEmail(String input) {
-    debugPrint("validating");
+    Logger.log("CommonUtil","validating");
     return RegExp(
-        r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$')
-        .hasMatch(input);
+      r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
+    ).hasMatch(input);
   }
 
   static bool isEqualBothString(String input1, String input2) {
-    debugPrint('input1=$input1 input2=$input2');
+    Logger.log("CommonUtil",'input1=$input1 input2=$input2');
     if (!isBlank(input1) && !isBlank(input2)) {
       if (input1.toUpperCase().trim() == input2.toUpperCase().trim()) {
-        debugPrint('true found');
+        Logger.log("CommonUtil",'true found');
         return true;
       } else {
         return false;
       }
-    }
-    else {
+    } else {
       return false;
     }
   }
 
-  static Widget getImgFromBase64OriginalSizeNoSplit(String base64String,
-      BuildContext context) {
+  static Widget getImgFromBase64OriginalSizeNoSplit(
+    String base64String,
+    BuildContext context,
+  ) {
     _mediaQueryData = MediaQuery.of(context);
     screenWidth = _mediaQueryData!.size.width;
     screenHeight = _mediaQueryData!.size.height;
@@ -425,15 +441,19 @@ class CommonUtil {
         // fit: BoxFit.fill,
       );
       // Image.memory(image, width: screenWidth/4, height: screenWidth/4,fit: BoxFit.contain,)
-
     } else {
-      return Image.asset('assets/images/no_image.jpg', width: screenWidth! / 4,
-        height: screenWidth! / 4,);
+      return Image.asset(
+        'assets/images/no_image.jpg',
+        width: screenWidth! / 4,
+        height: screenWidth! / 4,
+      );
     }
   }
 
-  static Widget getImgFromBase64FillSizeNoSplit(String base64String,
-      BuildContext context) {
+  static Widget getImgFromBase64FillSizeNoSplit(
+    String base64String,
+    BuildContext context,
+  ) {
     _mediaQueryData = MediaQuery.of(context);
     screenWidth = _mediaQueryData!.size.width;
     screenHeight = _mediaQueryData!.size.height;
@@ -450,27 +470,25 @@ class CommonUtil {
         fit: BoxFit.fill,
       );
       // Image.memory(image, width: screenWidth/4, height: screenWidth/4,fit: BoxFit.contain,)
-
     } else {
-      return Image.asset('assets/images/no_image.jpg', width: screenWidth! / 4,
-        height: screenWidth! / 4,);
+      return Image.asset(
+        'assets/images/no_image.jpg',
+        width: screenWidth! / 4,
+        height: screenWidth! / 4,
+      );
     }
   }
 
-  static Widget getFileBasedOnFileType(String fileName,String fileType){
-    if(!isBlank(fileType) || !isBlank(fileName)){
-      if(isEqualBothString(fileType,Constant.FILE_TYPE_IMAGE)){
-        return Container(
-          child: CommonUtil.getImageFromStorage(fileName),
-        );
-      }else if(isEqualBothString(fileType,Constant.FILE_TYPE_VIDEO)){
+  static Widget getFileBasedOnFileType(String fileName, String fileType) {
+    if (!isBlank(fileType) || !isBlank(fileName)) {
+      if (isEqualBothString(fileType, Constant.FILE_TYPE_IMAGE)) {
+        return Container(child: CommonUtil.getImageFromStorage(fileName));
+      } else if (isEqualBothString(fileType, Constant.FILE_TYPE_VIDEO)) {
         return Container(
           height: 200,
           width: 200,
-          child: IconButton(icon: Icon(
-            Icons.video_call,
-            size: 30,
-          ),
+          child: IconButton(
+            icon: Icon(Icons.video_call, size: 30),
             onPressed: () {
               // _controller!.seekTo(Duration(seconds: _start.toInt()));
               // _controller!.play();
@@ -478,36 +496,32 @@ class CommonUtil {
               //   context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoPath: fileName,),),
               // );
               // VideoPlayerScreen(videoPath: fileName,);
-            },),
+            },
+          ),
         );
-      }else if(isEqualBothString(fileType,Constant.FILE_TYPE_TEXT)){
-        return Container(
-          child: Text(fileName),
-        );
-      }else{
-        return Container(
-          child: Text("unknown data"),
-        );
+      } else if (isEqualBothString(fileType, Constant.FILE_TYPE_TEXT)) {
+        return Container(child: Text(fileName));
+      } else {
+        return Container(child: Text("unknown data"));
       }
-
-    }else{
-      return Container(
-          child: Text("media not found"),
-      );
+    } else {
+      return Container(child: Text("media not found"));
     }
-
   }
-  static Widget getImageFromBase64OriginalSize(String base64String,
-      BuildContext context) {
-    debugPrint('base64String in OG=$base64String');
+
+  static Widget getImageFromBase64OriginalSize(
+    String base64String,
+    BuildContext context,
+  ) {
+    Logger.log("CommonUtil",'base64String in OG=$base64String');
     _mediaQueryData = MediaQuery.of(context);
     screenWidth = _mediaQueryData!.size.width;
     screenHeight = _mediaQueryData!.size.height;
-    debugPrint('screenHeight in OG=$screenHeight');
+    Logger.log("CommonUtil",'screenHeight in OG=$screenHeight');
     var image;
     if (base64String != null && base64String != "") {
       List<String> list = base64String.split(",");
-      debugPrint(list.toString());
+      Logger.log("CommonUtil",list.toString());
       String finalImg = "";
       if (list[0].startsWith("data:image/jpeg;")) {
         finalImg = list[1];
@@ -525,10 +539,12 @@ class CommonUtil {
         // fit: BoxFit.fill,
       );
       // Image.memory(image, width: screenWidth/4, height: screenWidth/4,fit: BoxFit.contain,)
-
     } else {
-      return Image.asset('assets/images/no_image.jpg', width: screenWidth! / 4,
-        height: screenWidth! / 4,);
+      return Image.asset(
+        'assets/images/no_image.jpg',
+        width: screenWidth! / 4,
+        height: screenWidth! / 4,
+      );
     }
   }
 
@@ -611,11 +627,11 @@ class CommonUtil {
   //   String projectVersion="";
   //   try {
   //     PackageInfo packageInfo = await PackageInfo.fromPlatform();
-  //     debugPrint('packageName=${packageInfo.packageName}');
-  //     debugPrint('buildNumber=${packageInfo.buildNumber}');
-  //     debugPrint('projectVersion=${packageInfo.version}');
+  //     Logger.log("CommonUtil",'packageName=${packageInfo.packageName}');
+  //     Logger.log("CommonUtil",'buildNumber=${packageInfo.buildNumber}');
+  //     Logger.log("CommonUtil",'projectVersion=${packageInfo.version}');
   //     projectVersion=await packageInfo.version;
-  //     debugPrint('appName=${packageInfo.appName}');
+  //     Logger.log("CommonUtil",'appName=${packageInfo.appName}');
   //   } on PlatformException {
   //     projectVersion = 'Failed to get build number.';
   //   }
@@ -628,10 +644,10 @@ class CommonUtil {
   //     PackageInfo packageInfo = await PackageInfo.fromPlatform();
   //     // projectCode = await GetVersion.projectCode;
   //     buildNumber = packageInfo.buildNumber;
-  //     debugPrint('buildNumber=${buildNumber}');
+  //     Logger.log("CommonUtil",'buildNumber=${buildNumber}');
   //
   //   } on PlatformException {
-  //     debugPrint('Failed to get build number.');
+  //     Logger.log("CommonUtil",'Failed to get build number.');
   //     buildNumber = '2052';
   //   }
   //   return buildNumber;
@@ -681,15 +697,14 @@ class CommonUtil {
           SizedBox(
             child: LinearProgressIndicator(
               backgroundColor: Colors.white,
-              valueColor:
-              AlwaysStoppedAnimation<Color>(CompanyStyle.primaryColor[900]!),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                CompanyStyle.primaryColor[900]!,
+              ),
             ),
             height: 1,
             width: screenWidth! / 2,
           ),
-          SizedBox(
-            height: 10,
-          ),
+          SizedBox(height: 10),
           Text(
             msg != null ? msg : 'Loading...',
             style: TextStyle(fontSize: screenWidth! / 20),
@@ -700,7 +715,7 @@ class CommonUtil {
   }
 
   static bool isBlank(String str) {
-    debugPrint("str=$str");
+    Logger.log("CommonUtil","str=$str");
     if (str == null || str == "" || str.isEmpty) {
       return true;
     }
@@ -708,7 +723,7 @@ class CommonUtil {
   }
 
   static bool isAlphaNumericOnly(String text) {
-    debugPrint("text=$text");
+    Logger.log("CommonUtil","text=$text");
     return RegExp(r'^[a-zA-Z0-9]+$').hasMatch(text);
   }
 
@@ -725,11 +740,11 @@ class CommonUtil {
   //   if(!isBlank(accountId)){
   //     finalPath=finalPath+'/$accountId';
   //   }
-  //   debugPrint('createFolderInAppDocDir called='+finalPath);
+  //   Logger.log("CommonUtil",'createFolderInAppDocDir called='+finalPath);
   //   final List<Directory> result = await getExternalStorageDirectories();
   //
-  //   debugPrint('result length='+result.length.toString());
-  //   debugPrint('final path='+result[0].path);
+  //   Logger.log("CommonUtil",'result length='+result.length.toString());
+  //   Logger.log("CommonUtil",'final path='+result[0].path);
   //
   //   Directory _appDocDirFolder =  Directory('${result[0].path}/$finalPath/');
   //   Uint8List bytes = base64.decode(base64ImgFile.split(",")[1]);
@@ -758,11 +773,11 @@ class CommonUtil {
   //   if(!isBlank(accountId)){
   //     finalPath=finalPath+'/$accountId';
   //   }
-  //   debugPrint('createFolderInAppDocDir called='+finalPath);
+  //   Logger.log("CommonUtil",'createFolderInAppDocDir called='+finalPath);
   //   final List<Directory> result = await getExternalStorageDirectories();
   //
-  //   debugPrint('result length='+result.length.toString());
-  //   debugPrint('final path='+result[0].path);
+  //   Logger.log("CommonUtil",'result length='+result.length.toString());
+  //   Logger.log("CommonUtil",'final path='+result[0].path);
   //
   //   Directory _appDocDirFolder =  Directory('${result[0].path}/$finalPath');
   //   Uint8List bytes = base64.decode(base64ImgFile.split(",")[1]);
@@ -770,14 +785,14 @@ class CommonUtil {
   //   if(await _appDocDirFolder.exists()){
   //     File file = File("${_appDocDirFolder.path}/${fileName+extension}");
   //     await file.writeAsBytes(bytes);
-  //     debugPrint('_appDocDirFolder path='+_appDocDirFolder.path);
-  //     debugPrint('_appDocDirFolder path='+file.path);
+  //     Logger.log("CommonUtil",'_appDocDirFolder path='+_appDocDirFolder.path);
+  //     Logger.log("CommonUtil",'_appDocDirFolder path='+file.path);
   //     return file.path;
   //   }else{
   //     Directory _appDocDirNewFolder=await _appDocDirFolder.create(recursive: true);
   //     File file = File("${_appDocDirNewFolder.path}/${fileName+extension}");
   //     await file.writeAsBytes(bytes);
-  //     debugPrint('_appDocDirNewFolder path='+_appDocDirNewFolder.path);
+  //     Logger.log("CommonUtil",'_appDocDirNewFolder path='+_appDocDirNewFolder.path);
   //     return file.path;
   //   }
   // }
@@ -788,7 +803,7 @@ class CommonUtil {
   // }
 
   static String convertToIndianCurrency(double amount) {
-    debugPrint("amount=${amount}");
+    Logger.log("CommonUtil","amount=${amount}");
     if (amount == null) {
       amount = 0;
     }
@@ -800,7 +815,7 @@ class CommonUtil {
   //   // final dir = await getTemporaryDirectory();
   //   final targetPath = '${xfile.path}/temp_compressed.jpg';
   //   File file=File(xfile.path);
-  //   Logger.log("file.absolute.path="+file.absolute.path);
+  //   Logger.log("CommonUtil","file.absolute.path="+file.absolute.path);
   //   var result = await FlutterImageCompress.compressAndGetFile(
   //     file.absolute.path,
   //     targetPath,
@@ -824,34 +839,49 @@ class CommonUtil {
     // Compress & Save
     final compressedBytes = img.encodeJpg(resized, quality: 20);
     final dir = await getTemporaryDirectory();
-    // Logger.log("dir="+dir.path);
+    // Logger.log("CommonUtil","dir="+dir.path);
     final compressedFile = File('${dir.path}/compressed.jpg')
       ..writeAsBytesSync(compressedBytes);
 
     return compressedFile;
   }
+
   static bool isBase64(String str) {
-    // A simple regex to check for Base64 pattern. It's not foolproof but covers most cases.
-    // It looks for valid Base64 characters and padding.
-  bool isImage=str.startsWith("data:image/jpeg;base64");
-    debugPrint("isImage=$isImage");
-    debugPrint("str="+str);
+    bool isImage = str.startsWith("data:image/jpeg;base64");
+    Logger.log("CommonUtil","isImage=$isImage");
+    Logger.log("CommonUtil","str=" + str);
     if (!str.startsWith("data:image/jpeg;base64")) return false;
     return true;
   }
-Widget getTextField(TextEditingController _contactController,Color color,String hintText){
-  return TextField(
-    controller: _contactController,
-    keyboardType: TextInputType.phone,
-    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-    decoration: InputDecoration(
-      hintText: hintText,
-      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 16),
-      prefixIcon: Icon(Icons.phone_android_rounded, color: color),
-      border: InputBorder.none,
-      contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-    ),
-  );
-}
-}
 
+  Widget getTextField(
+    TextEditingController _contactController,
+    Color color,
+    String hintText,
+  ) {
+    return TextField(
+      controller: _contactController,
+      keyboardType: TextInputType.phone,
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 16),
+        prefixIcon: Icon(Icons.phone_android_rounded, color: color),
+        border: InputBorder.none,
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 18,
+          horizontal: 16,
+        ),
+      ),
+    );
+  }
+
+  String formatTimestamp(int timestamp) {
+    final DateTime dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    final now = DateTime.now();
+    if (now.difference(dateTime).inDays == 0)
+      return DateFormat('hh:mm a').format(dateTime);
+    if (now.difference(dateTime).inDays == 1) return "Yesterday";
+    return DateFormat('dd/MM/yy').format(dateTime);
+  }
+}

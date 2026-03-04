@@ -20,7 +20,7 @@ class ChatMessage {
     'receiverId': receiverId,
     'senderId': senderId,
     'content': content,
-    'timestamp': timestamp.toIso8601String(),
+    'timestamp': timestamp.toString(),
     'status': status,
   };
 
@@ -29,7 +29,7 @@ class ChatMessage {
     receiverId: m['receiverId'],
     senderId: m['senderId'],
     content: m['content'],
-    timestamp: DateTime.parse(m['timestamp']),
+    timestamp: DateTime.now(),
     status: m['status'],
   );
 }

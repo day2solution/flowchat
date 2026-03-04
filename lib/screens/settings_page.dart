@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:flowchat/constant.dart';
+import 'package:flowchat/config/environment.dart';
 import 'package:flowchat/models/my_account.dart';
 import 'package:flowchat/services/chat_repository.dart';
 import 'package:flowchat/services/user_api_service.dart';
@@ -55,7 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> updateProfile({required String contactNo, File? profileImage}) async {
-    final uri = Uri.parse("${AppConstant.HOST}/api/users/update-profile");
+    final uri = Uri.parse("${Environment.hostApiUrl}/api/users/update-profile");
     var request = http.MultipartRequest("PUT", uri);
     request.fields["contactNo"] = contactNo;
 
@@ -110,7 +110,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       backgroundColor: Colors.grey.shade100,
                       backgroundImage: _profileImage != null
                           ? FileImage(_profileImage!)
-                          : NetworkImage("${AppConstant.HOST}/uploads/profiles/${widget.myAccount.contactNo}.gif") as ImageProvider,
+                          : NetworkImage("${Environment.hostApiUrl}/uploads/profiles/${widget.myAccount.contactNo}.gif") as ImageProvider,
                       child: null, // Image handled by providers
                     ),
                   ),

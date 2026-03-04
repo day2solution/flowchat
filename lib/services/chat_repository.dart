@@ -1,3 +1,4 @@
+import 'package:flowchat/config/Logger.dart';
 import 'package:flowchat/models/my_account.dart';
 import 'package:flowchat/services/api-service.dart';
 import 'package:flutter/cupertino.dart';
@@ -39,7 +40,7 @@ class ChatRepository {
     try {
       // The API service now returns the MyAccount model from api_response.dart
       final apiAccountData = await _apiService.fetchUserData(contactNo);
-      debugPrint("apiAccountData=${apiAccountData}");
+      Logger.log("api-service","apiAccountData=${apiAccountData}");
       if (apiAccountData != null) {
         // Create an instance of the DB-compatible MyAccount model
         final dbAccount = MyAccount(
@@ -55,7 +56,7 @@ class ChatRepository {
         return dbAccount;
       }
     } catch (e) {
-      debugPrint("Failed to fetch user from API: $e");
+      Logger.log("api-service","Failed to fetch user from API: $e");
     }
     return null;
   }
@@ -83,7 +84,7 @@ class ChatRepository {
         return dbAccount;
       }
     } catch (e) {
-      debugPrint("Failed to update user and save to DB: $e");
+      Logger.log("api-service","Failed to update user and save to DB: $e");
     }
     return null;
   }
@@ -115,7 +116,7 @@ class ChatRepository {
         return dbAccount;
       }
     } catch (e) {
-      debugPrint("Failed to update user and save to DB: $e");
+      Logger.log("api-service","Failed to update user and save to DB: $e");
     }
     return null;
   }

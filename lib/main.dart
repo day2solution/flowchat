@@ -1,3 +1,5 @@
+import 'package:flowchat/config/Logger.dart';
+import 'package:flowchat/config/app_style.dart';
 import 'package:flowchat/config/environment.dart';
 import 'package:flowchat/models/my_account.dart';
 import 'package:flowchat/screens/auth_screen_new.dart';
@@ -45,10 +47,10 @@ class _ChatAppState extends State<ChatApp> {
   @override
   void initState() {
     super.initState();
-    debugPrint("env=${Environment.environment}");
-    debugPrint("hostApiUrl=${Environment.hostApiUrl}");
-    debugPrint("socketUrl=${Environment.socketUrl}");
-    debugPrint("debugMode=${Environment.debugMode}");
+    Logger.log("main","env=${Environment.environment}");
+    Logger.log("main","hostApiUrl=${Environment.hostApiUrl}");
+    Logger.log("main","socketUrl=${Environment.socketUrl}");
+    Logger.log("main","debugMode=${Environment.debugMode}");
     _checkAndSetAccount();
   }
 
@@ -77,8 +79,8 @@ class _ChatAppState extends State<ChatApp> {
   @override
   Widget build(BuildContext context) {
     // Unique Social/Friendship Color Palette (Coral & Sunset)
-    const primaryBrandColor = Color(0xFFFF6B6B); // Soft Coral
-    const secondaryBrandColor = Color(0xFFFFD93D); // Warm Sunny Yellow
+    const primaryBrandColor = AppStyle.primaryColor; // Soft Coral
+    const secondaryBrandColor = AppStyle.secondaryColor; // Warm Sunny Yellow
 
     if (!_isDbChecked) {
       return const MaterialApp(
@@ -97,7 +99,6 @@ class _ChatAppState extends State<ChatApp> {
           primary: primaryBrandColor,
           secondary: secondaryBrandColor,
           surface: Colors.white,
-          background: const Color(0xFFFAFAFA),
         ),
         // Modernized AppBar for social feel
         appBarTheme: const AppBarTheme(

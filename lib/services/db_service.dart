@@ -1,3 +1,4 @@
+import 'package:flowchat/config/Logger.dart';
 import 'package:flowchat/models/my_account.dart';
 import 'package:flowchat/models/user.dart';
 import 'package:flutter/cupertino.dart';
@@ -90,7 +91,7 @@ class DbService {
   }
 
   Future<void> saveMyAccount(MyAccount account) async {
-    debugPrint("saving account ${account.toJson()}");
+    Logger.log("db_service","saving account ${account.toJson()}");
     final db = await database;
     await db.insert('my_account', account.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
   }
@@ -107,7 +108,7 @@ class DbService {
     return rows.map((r) => ChatMessage.fromMap(r)).toList();
   }
   Future<void> updateMessageStatus(String messageId, String status) async {
-    debugPrint('Updating message status: $messageId to $status');
+    Logger.log("db_service",'Updating message status: $messageId to $status');
     final db = await database;
     await db.update(
       'messages',
@@ -125,7 +126,7 @@ class DbService {
     );
 
     for (var t in tables) {
-      debugPrint("Table: ${t['name']}");
+      Logger.log("db_service","Table: ${t['name']}");
     }
   }
   Future<List<User>> getChats() async {
@@ -148,7 +149,7 @@ class DbService {
       where: 'contactNo = ?',
       whereArgs: [contactNo],
     );
-    debugPrint("result=$result");
+    Logger.log("db_service","result=$result");
     return result.map((map) => MyAccount.fromJson(map)).toList();
   }
   Future<List<MyAccount>> getAllMyAccount() async {
@@ -160,6 +161,6 @@ class DbService {
   Future<void> clearMyAccount() async {
     final db = await database;
     await db.delete('my_account');
-    debugPrint("my_account table cleared.");
+    Logger.log("db_service","my_account table cleared.");
   }
 }

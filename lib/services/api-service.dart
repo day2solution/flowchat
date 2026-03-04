@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flowchat/config/Logger.dart';
 import 'package:flowchat/config/environment.dart';
 import 'package:flowchat/models/ResponseModel.dart';
 import 'package:flowchat/models/my_account.dart';
@@ -19,13 +20,13 @@ class ApiService {
       }
     } catch (e) {
       // Handle exceptions like no internet connection, etc.
-      debugPrint('Error in getUser: $e');
+      Logger.log("api-service",'Error in getUser: $e');
       return null;
     }
   }
   Future<MyAccount?> fetchUserData(String contactNo) async {
     String url='$_baseUrl/api/auth/login/$contactNo';
-    debugPrint("url=$url");
+    Logger.log("api-service","url=$url");
     final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
@@ -34,11 +35,11 @@ class ApiService {
 
       if (apiResponse.status == "SUCCESS") {
         // Return the nested 'data' object which is of type MyAccount
-        debugPrint("success found");
+        Logger.log("api-service","success found");
         return apiResponse.data;
       }
     }
-    debugPrint("failure found");
+    Logger.log("api-service","failure found");
     // Return null if the request failed or status is not SUCCESS
     return null;
   }
@@ -62,7 +63,7 @@ class ApiService {
         throw Exception('Failed to update user name. Status code: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error in updateUserFullName: $e');
+      Logger.log("api-service",'Error in updateUserFullName: $e');
       return null;
     }
   }
@@ -83,7 +84,7 @@ class ApiService {
         throw Exception('Failed to update user name. Status code: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error in updateUserFullName: $e');
+      Logger.log("api-service",'Error in updateUserFullName: $e');
       return null;
     }
   }
@@ -103,7 +104,7 @@ class ApiService {
         throw Exception('Failed to register user. Status code: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error in registerUser: $e');
+      Logger.log("api-service",'Error in registerUser: $e');
       return null;
     }
   }

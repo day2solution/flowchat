@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flowchat/config/Logger.dart';
 import 'package:flowchat/config/environment.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:web_socket_channel/io.dart';
@@ -29,10 +30,10 @@ class WebSocketService {
     _userId = userId;
     _isConnected = false; // Reset state
 
-    debugPrint('WebSocket connecting for: $userId');
+    Logger.log("web_socket_service",'WebSocket connecting for: $userId');
 
     final url = '${Environment.socketUrl}/ws/chat?userId=$userId';
-    debugPrint('🌐 Attempting connection to: $url');
+    Logger.log("web_socket_service",'🌐 Attempting connection to: $url');
     try {
       _channel = IOWebSocketChannel.connect(Uri.parse(url));
 
@@ -79,19 +80,19 @@ class WebSocketService {
               break;
           }
         } catch (e) {
-          debugPrint('WS parse error $e');
+          Logger.log("web_socket_service",'WS parse error $e');
         }
       }, onDone: () {
-        debugPrint('WebSocket closed');
+        Logger.log("web_socket_service",'WebSocket closed');
         _isConnected = false;
         reconnect(userId);
       }, onError: (err) {
-        debugPrint('WebSocket error: $err');
+        Logger.log("web_socket_service",'WebSocket error: $err');
         _isConnected = false;
         reconnect(userId);
       });
     } catch (e) {
-      debugPrint("Connection error: $e");
+      Logger.log("web_socket_service","Connection error: $e");
       reconnect(userId);
     }
   }
@@ -104,13 +105,13 @@ class WebSocketService {
       try {
         _channel!.sink.add(data);
       } catch (e) {
-        debugPrint("❌ Sink error: $e");
+        Logger.log("web_socket_service","❌ Sink error: $e");
         _isConnected = false;
         _messageQueue.add(data);
         _attemptReconnect();
       }
     } else {
-      debugPrint("⏳ Socket not ready. Adding message to queue.");
+      Logger.log("web_socket_service","⏳ Socket not ready. Adding message to queue.");
       _messageQueue.add(data);
 
       // If we aren't connected and not currently trying to connect, start connection
@@ -126,7 +127,7 @@ class WebSocketService {
     if (_isReconnecting || _userId == null) return;
 
     _isReconnecting = true;
-    debugPrint("🔄 Reconnect triggered for $_userId");
+    Logger.log("web_socket_service","🔄 Reconnect triggered for $_userId");
 
     Future.delayed(const Duration(seconds: 3), () {
       _isReconnecting = false;
@@ -144,7 +145,7 @@ class WebSocketService {
 
   // ✅ Send all queued messages once reconnected
   void _flushQueue() {
-    debugPrint("🚀 Flushing queue: ${_messageQueue.length} messages");
+    Logger.log("web_socket_service","🚀 Flushing queue: ${_messageQueue.length} messages");
     while (_messageQueue.isNotEmpty) {
       final data = _messageQueue.removeAt(0);
       _channel?.sink.add(data);
@@ -161,9 +162,10 @@ class WebSocketService {
       "receiverId": receiverId,
       "content": content,
       "type": "text",
-      "timestamp": DateTime.now().toUtc().toIso8601String(),
+      "timestamp": DateTime.now().toString(),
     };
-
+    Logger.log("web_socket_service", payload.toString());
+    // DateTime.now().toUtc().toIso8601String(),
     _safeSend(payload); // ✅ Use safeSend instead of direct sink access
 
     // Optimistic local update
@@ -207,7 +209,7 @@ class WebSocketService {
   void onUserPresence(void Function(String, bool) cb) => _presenceListeners.add(cb);
 
   void disconnect() {
-    debugPrint("Disconnecting...");
+    Logger.log("web_socket_service","Disconnecting...");
     _isConnected = false;
     _channel?.sink.close();
     _channel = null;

@@ -1,12 +1,10 @@
 import 'dart:convert';
-import 'package:flowchat/constant.dart';
+import 'package:flowchat/config/environment.dart';
 import 'package:flowchat/services/chat_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'chat_screen.dart';
 import '../models/chat_room.dart';
 import '../models/user.dart';
-import 'package:uuid/uuid.dart';
 
 class ChatListScreen extends StatefulWidget {
   final String loggedInusername;
@@ -53,7 +51,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('${AppConstant.HOST}/api/users/search?query=$query'),
+        Uri.parse('${Environment.hostApiUrl}/api/users/search?query=$query'),
       );
 
       if (response.statusCode == 200) {
