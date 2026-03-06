@@ -1,5 +1,4 @@
 class User {
-  //final int id;
   final String name;
   final String? contactNo;
   final String? about;
@@ -10,7 +9,6 @@ class User {
   int? unreadCount;
 
   User({
-   // required this.id,
     required this.name,
     this.contactNo,
     this.about,
@@ -18,17 +16,19 @@ class User {
     required this.profileImage,
     this.lastMessage,
     this.timestamp,
-    this.unreadCount
+    this.unreadCount,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      //id: json['id'] is String ? int.parse(json['id']) : json['id'], // ✅ handles both int and string ids
       name: json['name'] ?? '',
       contactNo: json['contactNo'],
       about: json['about'],
-      online: json['online'] ?? false,
-      profileImage: json['profileImage'],
+      // ✅ Handle both API (bool) and SQLite (int 0/1)
+      online: json['online'] is int
+          ? json['online'] == 1
+          : (json['online'] ?? false),
+      profileImage: json['profileImage'] ?? '',
       lastMessage: json['lastMessage'],
       timestamp: json['timestamp'],
       unreadCount: json['unreadCount'],
@@ -37,15 +37,15 @@ class User {
 
   Map<String, dynamic> toJson() {
     return {
-      //'id': id,
       'name': name,
       'contactNo': contactNo,
       'about': about,
-      'online': online,
+      // ✅ Convert bool to int (1/0) for SQLite storage compatibility
+      'online': online ? 1 : 0,
       'profileImage': profileImage,
       'lastMessage': lastMessage,
       'timestamp': timestamp,
-      'unreadCount': unreadCount
+      'unreadCount': unreadCount,
     };
   }
 }

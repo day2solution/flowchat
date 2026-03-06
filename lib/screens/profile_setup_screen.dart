@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:ui';
+import 'package:flowchat/util/ScreenUtil.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flowchat/config/environment.dart';
@@ -29,8 +29,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final ChatRepository _repo = ChatRepository();
   bool _isLoading = false;
   File? _imageFile;
+
   final primaryColor = const Color(0xFFFF7F50);
   final secondaryColor = const Color(0xFF6C63FF);
+
+  // Responsive values
+  late double screenWidth;
+  late double screenHeight;
+
   @override
   void initState() {
     super.initState();
@@ -43,33 +49,36 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    screenWidth = MediaQuery.of(context).size.width;
+    screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildHeader(primaryColor, secondaryColor),
+            _buildHeader(),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
+              padding: EdgeInsets.fromLTRB(24, 0, 24, screenHeight / 20),
               child: Column(
                 children: [
-                  const SizedBox(height: 40),
+                  SizedBox(height: screenHeight / 20),
                   _buildUniqueTextField(
                     label: "FULL NAME",
                     controller: _nameController,
                     icon: Icons.person_rounded,
                     color: primaryColor,
                   ),
-                  const SizedBox(height: 25),
-                  _buildUniqueTextField(
+                  SizedBox(height: screenHeight / 40),
+                  _buildUniqueContactNumField(
                     label: "PHONE NUMBER",
                     controller: _phoneController,
                     icon: Icons.phone_iphone_rounded,
+
                     color: secondaryColor,
                     enabled: false,
                   ),
-                  const SizedBox(height: 25),
+                  SizedBox(height: screenHeight / 40),
                   _buildUniqueTextField(
                     label: "ABOUT ME",
                     controller: _aboutController,
@@ -77,8 +86,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     color: Colors.orange,
                     maxLines: 3,
                   ),
-                  const SizedBox(height: 50),
-                  _buildSubmitButton(primaryColor),
+                  SizedBox(height: (screenHeight / 15).clamp(30.0, 60.0)),
+                  _buildSubmitButton(),
                 ],
               ),
             ),
@@ -88,18 +97,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
-  Widget _buildHeader(Color color1, Color color2) {
+  Widget _buildHeader() {
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
         // Artistic Background Shape
         Container(
-          height: 280,
+          height: screenHeight / 3,
           width: double.infinity,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [color1, color2],
+              colors: [primaryColor, secondaryColor],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -108,27 +117,31 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             ),
           ),
         ),
-        // Decorative Circles for "Unique" look
+        // Decorative Circles (Responsive Radius)
         Positioned(
-          top: -50,
-          right: -50,
-          child: CircleAvatar(radius: 100, backgroundColor: Colors.white.withOpacity(0.1)),
+          top: -screenWidth / 8,
+          right: -screenWidth / 8,
+          child: CircleAvatar(
+            radius: screenWidth / 4,
+            backgroundColor: Colors.white.withValues(alpha: 0.1),
+          ),
         ),
 
         SafeArea(
           child: Column(
             children: [
+              SizedBox(height: screenHeight / 120),
               Text(
                 widget.isNewProfile ? "Welcome!" : "Profile Settings",
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
-                  fontSize: 24,
+                  fontSize: ScreenUtil().getAdaptiveSize(context, 26),
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1,
                 ),
               ),
-              const SizedBox(height: 40),
-              _buildAvatarPicker(color1),
+              SizedBox(height: screenHeight / 25),
+              _buildAvatarPicker(),
             ],
           ),
         ),
@@ -136,7 +149,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
-  Widget _buildAvatarPicker(Color primaryColor) {
+  Widget _buildAvatarPicker() {
+    final double avatarRadius = (screenWidth / 6).clamp(50.0, 75.0);
+
     return GestureDetector(
       onTap: _pickImage,
       child: Stack(
@@ -147,31 +162,40 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               color: Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, 10))
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
               ],
             ),
             child: CircleAvatar(
-              radius: 65,
+              radius: avatarRadius,
               backgroundColor: Colors.grey.shade100,
               backgroundImage: _imageFile != null
                   ? FileImage(_imageFile!)
                   : NetworkImage(
-                "${Environment.hostApiUrl}/uploads/profiles/${widget.myAccount.contactNo}.gif",
-              ) as ImageProvider,
+                          "${Environment.hostApiUrl}/uploads/profiles/${widget.myAccount.contactNo}.gif",
+                        )
+                        as ImageProvider,
             ),
           ),
           Positioned(
-            bottom: 0,
-            right: 0,
+            bottom: 5,
+            right: 5,
             child: Container(
-              height: 45,
-              width: 45,
+              height: avatarRadius / 1.5,
+              width: avatarRadius / 1.5,
               decoration: BoxDecoration(
                 color: Colors.black,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 3),
               ),
-              child: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
+              child: Icon(
+                Icons.edit_rounded,
+                color: Colors.white,
+                size: avatarRadius / 3,
+              ),
             ),
           ),
         ],
@@ -193,9 +217,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         Text(
           "  $label",
           style: TextStyle(
-            fontSize: 12,
+            fontSize: ScreenUtil().getAdaptiveSize(context, 12),
             fontWeight: FontWeight.w800,
-            color: color.withOpacity(0.8),
+            color: color.withValues(alpha: 0.8),
             letterSpacing: 1.5,
           ),
         ),
@@ -207,21 +231,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             border: Border.all(color: Colors.grey.shade100, width: 2),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.05),
+                color: color.withValues(alpha: 0.05),
                 blurRadius: 15,
                 offset: const Offset(0, 5),
-              )
+              ),
             ],
           ),
           child: TextField(
             controller: controller,
             enabled: enabled,
             maxLines: maxLines,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: ScreenUtil().getAdaptiveSize(context, 16),
+            ),
             decoration: InputDecoration(
-              prefixIcon: Icon(icon, color: color),
+              prefixIcon: Icon(icon, color: color,size: ScreenUtil().getAdaptiveSize(context, 20),),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(18),
+              contentPadding: EdgeInsets.all(screenWidth / 22),
             ),
           ),
         ),
@@ -229,16 +256,66 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
-  Widget _buildSubmitButton(Color primaryColor) {
+  Widget _buildUniqueContactNumField({
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    required Color color,
+    bool enabled = true,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "  $label",
+          style: TextStyle(
+            fontSize: ScreenUtil().getAdaptiveSize(context, 12),
+            fontWeight: FontWeight.w800,
+            color: color.withValues(alpha: 0.8),
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FD),
+            // Slightly different color for disabled
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade100, width: 2),
+          ),
+          child: TextField(
+            controller: controller,
+            maxLength: 10,
+            enabled: enabled,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: ScreenUtil().getAdaptiveSize(context, 16),
+              color: Colors.grey,
+            ),
+            decoration: InputDecoration(
+              prefixIcon: Icon(icon, color: color.withValues(alpha: 0.5),size: ScreenUtil().getAdaptiveSize(context, 20),),
+              counterText: "",
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.all(screenWidth / 22),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton() {
     return Container(
       width: double.infinity,
-      height: 65,
+      // height: (screenHeight / 12).clamp(55.0, 70.0),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(25),
-        gradient: LinearGradient(colors: [primaryColor, const Color(0xFFFF4D4D)]),
+        gradient: LinearGradient(
+          colors: [primaryColor, const Color(0xFFFF4D4D)],
+        ),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.4),
+            color: primaryColor.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -249,32 +326,36 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
         ),
         child: _isLoading
             ? const CircularProgressIndicator(color: Colors.white)
             : Text(
-          widget.isNewProfile ? "GET STARTED" : "SAVE CHANGES",
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1,
-          ),
-        ),
+                widget.isNewProfile ? "GET STARTED" : "SAVE CHANGES",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: ScreenUtil().getAdaptiveSize(context, 18),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1,
+                ),
+              ),
       ),
     );
   }
 
-  // Helper Methods (Keep your existing _pickImage and _submit logic here)
+  // Logic remains identical to your original code
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
     if (pickedFile != null) setState(() => _imageFile = File(pickedFile.path));
   }
 
   Future<void> _submit() async {
-    // ... (Keep your existing validation and API call logic)
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -301,13 +382,19 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       if (mounted) {
         WebSocketService().connect(dbAccount.contactNo);
         if (widget.isNewProfile) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ChatListScreen(myAccount: fetchedAccount ?? dbAccount)));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  ChatListScreen(myAccount: fetchedAccount ?? dbAccount),
+            ),
+          );
         } else {
           Navigator.pop(context);
         }
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 }

@@ -4,6 +4,7 @@ class RecentChat {
   final String lastMessage;
   final int timestamp; // epoch millis
   final String? profileImage;
+  bool? online;
 
   RecentChat({
     required this.contactNo,
@@ -11,6 +12,7 @@ class RecentChat {
     required this.lastMessage,
     required this.timestamp,
     this.profileImage,
+    this.online,
   });
 
   Map<String, dynamic> toMap() {
@@ -20,6 +22,7 @@ class RecentChat {
       'lastMessage': lastMessage,
       'timestamp': timestamp,
       'profileImage': profileImage,
+      'online': online,
     };
   }
 
@@ -30,6 +33,7 @@ class RecentChat {
       lastMessage: map['lastMessage'],
       timestamp: map['timestamp'],
       profileImage: map['profileImage'],
+      online: map['online'],
     );
   }
 }

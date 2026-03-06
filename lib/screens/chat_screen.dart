@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flowchat/config/environment.dart';
@@ -8,6 +7,7 @@ import 'package:flowchat/models/my_account.dart';
 import 'package:flowchat/models/recent_chat.dart';
 import 'package:flowchat/services/chat_db.dart';
 import 'package:flowchat/util/CommonUtil.dart';
+import 'package:flowchat/util/ScreenUtil.dart'; // Added ScreenUtil
 import '../models/chat_message.dart';
 import '../models/user.dart';
 import '../services/chat_repository.dart';
@@ -29,11 +29,12 @@ class _ChatScreenState extends State<ChatScreen> {
   final ChatRepository _repo = ChatRepository();
   List<ChatMessage> _messages = [];
   bool _peerTyping = false;
-  static double? screenWidth;
-  static double? screenHeight;
-  static MediaQueryData? _mediaQueryData;
 
-  // --- Theme Colors from Profile/Composer ---
+  // Responsive properties
+  late double screenWidth;
+  late double screenHeight;
+
+  // --- Theme Colors ---
   final Color coralColor = const Color(0xFFFF7F50);
   final Color purpleColor = const Color(0xFF6C63FF);
 
@@ -50,8 +51,7 @@ class _ChatScreenState extends State<ChatScreen> {
     WebSocketService().onTyping(_handleTyping);
   }
 
-  // --- Logic Implementations ---
-
+  // --- Logic Implementations (Same as yours) ---
   Future<void> _loadMessages() async {
     final msgs = await _repo.loadMessages(widget.peer.contactNo ?? "");
     if (mounted) setState(() => _messages = msgs);
@@ -87,7 +87,7 @@ class _ChatScreenState extends State<ChatScreen> {
       widget.peer.contactNo ?? "",
     );
     _saveToRecent(isText ? model.message : "📷 Image");
-    _loadMessages(); // Refresh to show the message sent locally
+    _loadMessages();
   }
 
   void _saveToRecent(String lastMsg) async {
@@ -97,6 +97,7 @@ class _ChatScreenState extends State<ChatScreen> {
       lastMessage: lastMsg,
       timestamp: DateTime.now().millisecondsSinceEpoch,
       profileImage: widget.peer.contactNo,
+      online: widget.peer.online,
     );
     await ChatDb().upsertChat(chat);
   }
@@ -109,32 +110,30 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _mediaQueryData = MediaQuery.of(context);
-    screenWidth = _mediaQueryData!.size.width;
-    screenHeight = _mediaQueryData!.size.height;
+    screenWidth = MediaQuery.of(context).size.width;
+    screenHeight = MediaQuery.of(context).size.height;
+    screenWidth = screenHeight > screenWidth ? screenHeight : screenWidth;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        toolbarHeight: screenWidth! / 6,
+        // toolbarHeight: (screenHeight / 14),
         backgroundColor: Colors.transparent,
+        elevation: 0,
         flexibleSpace: _buildUniqueHeader(),
         automaticallyImplyLeading: false,
       ),
-
       body: Column(
         children: [
-          // _buildUniqueHeader(),
           Expanded(
             child: Container(
               color: const Color(0xFFF8F9FD),
-              // Soft background matching Profile
               child: ListView.builder(
                 controller: _scrollController,
                 reverse: true,
-                // Key for chat: latest message at bottom
                 padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth!/40,
-                  vertical: screenWidth!/70,
+                  horizontal: screenWidth * 0.04,
+                  vertical: 10,
                 ),
                 itemCount: _messages.length,
                 itemBuilder: (ctx, i) {
@@ -144,15 +143,12 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
-          if (_peerTyping)
+          if (_peerTyping &&
+              widget.peer.contactNo != widget.myAccount.contactNo)
             Padding(
-              padding: EdgeInsets.only(left: screenWidth!/80, bottom: screenWidth!/100),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TypingIndicator(),
-              ),
+              padding: const EdgeInsets.only(left: 15, bottom: 5),
+              child: TypingIndicator(),
             ),
-          // Integrating your custom Composer
           Composer(onSend: _send, onTyping: _onTyping),
         ],
       ),
@@ -163,29 +159,29 @@ class _ChatScreenState extends State<ChatScreen> {
     return Stack(
       children: [
         Container(
-          height: screenWidth! / 3,
+          // height: screenWidth / 3,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [purpleColor, coralColor], // Profile screen combination
+              colors: [purpleColor, coralColor],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(60),
+              bottomLeft: Radius.circular(50),
             ),
           ),
         ),
         Positioned(
-          top: -30,
-          right: -30,
+          top: -screenWidth * 0.1,
+          right: -screenWidth * 0.1,
           child: CircleAvatar(
-            radius: 60,
-            backgroundColor: Colors.white.withOpacity(0.1),
+            radius: screenWidth * 0.15,
+            backgroundColor: Colors.white.withValues(alpha: 0.1),
           ),
         ),
         SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
                 IconButton(
@@ -197,7 +193,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 _buildHeaderAvatar(),
-                const SizedBox(width: 15),
+                const SizedBox(width: 12),
                 _buildHeaderTitle(),
                 IconButton(
                   onPressed: () {},
@@ -215,6 +211,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildHeaderAvatar() {
+    final double radius = (screenWidth * 0.055).clamp(20, 25);
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: const BoxDecoration(
@@ -222,7 +219,7 @@ class _ChatScreenState extends State<ChatScreen> {
         shape: BoxShape.circle,
       ),
       child: CircleAvatar(
-        radius: 22,
+        radius: radius,
         backgroundColor: Colors.grey.shade100,
         backgroundImage: NetworkImage(
           "${Environment.hostApiUrl}/uploads/profiles/${widget.peer.contactNo!}.gif",
@@ -239,19 +236,21 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Text(
             widget.peer.name,
-            style: const TextStyle(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 18,
+              fontSize: ScreenUtil().getAdaptiveSize(context, 10),
               fontWeight: FontWeight.w900,
             ),
           ),
           Text(
-            _peerTyping
+            _peerTyping && widget.peer.contactNo != widget.myAccount.contactNo
                 ? "typing..."
                 : (widget.peer.online ? "Online" : "Offline"),
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
-              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: ScreenUtil().getAdaptiveSize(context, 6),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -266,95 +265,84 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment: isMe
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            padding: isImage
-                ? const EdgeInsets.all(5)
-                : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: isImage
+            ? const EdgeInsets.all(5)
+            : EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.04,
+                vertical: 12,
+              ),
+        constraints: BoxConstraints(maxWidth: screenWidth * 0.78),
+        decoration: BoxDecoration(
+          gradient: isMe
+              ? LinearGradient(colors: [coralColor, const Color(0xFFFF4D4D)])
+              : null,
+          color: isMe ? null : Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(22),
+            topRight: const Radius.circular(22),
+            bottomLeft: Radius.circular(isMe ? 22 : 4),
+            bottomRight: Radius.circular(isMe ? 4 : 22),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isMe
+                  ? coralColor.withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
             ),
-            decoration: BoxDecoration(
-              // SENDER: Matches your Composer/Profile Button Gradient
-              // RECEIVER: Matches Profile Input Field (White)
-              gradient: isMe
-                  ? LinearGradient(
-                      colors: [coralColor, const Color(0xFFFF4D4D)],
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            GestureDetector(
+              onTap: isImage
+                  ? () => showImageDialog(
+                      message.content,
+                      "Photo",
+                      context,
+                      "image",
                     )
                   : null,
-              color: isMe ? null : Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(22),
-                topRight: const Radius.circular(22),
-                bottomLeft: Radius.circular(isMe ? 22 : 4),
-                bottomRight: Radius.circular(isMe ? 4 : 22),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: isMe
-                      ? coralColor.withOpacity(0.3)
-                      : Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onTap: isImage
-                      ? () => showImageDialog(
-                          message.content,
-                          "Photo",
-                          context,
-                          "image",
-                        )
-                      : null,
-                  child: isImage
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: CommonUtil.getImage(message.content, context),
-                        )
-                      : Text(
-                          message.content,
-                          style: TextStyle(
-                            color: isMe ? Colors.white : Colors.black87,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                ),
-
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      DateFormat('hh:mm a').format(
-                        DateTime.fromMillisecondsSinceEpoch(
-                          message.timestamp.millisecond,
-                        ),
-                      ),
+              child: isImage
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: CommonUtil.getImage(message.content, context),
+                    )
+                  : Text(
+                      message.content,
                       style: TextStyle(
-                        fontSize: 10,
-                        color: isMe ? Colors.white70 : Colors.grey,
-                        fontWeight: FontWeight.bold,
+                        color: isMe ? Colors.white : Colors.black87,
+                        fontSize: ScreenUtil().getAdaptiveSize(context, 15),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    if (isMe) const SizedBox(width: 4),
-                    _buildStatusIcon(message.status),
-                  ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  DateFormat('hh:mm a').format(
+                    DateTime.fromMillisecondsSinceEpoch(
+                      message.timestamp.millisecondsSinceEpoch,
+                    ),
+                  ),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isMe ? Colors.white70 : Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                if (isMe) const SizedBox(width: 4),
+                if (isMe) _buildStatusIcon(message.status),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -367,66 +355,29 @@ class _ChatScreenState extends State<ChatScreen> {
   ) {
     showDialog(
       context: context,
-      // use rootNavigator to ensure it sits on top of everything
       useRootNavigator: true,
       builder: (dialogContext) => Dialog(
-        // Rename context to dialogContext
         backgroundColor: Colors.transparent,
         insetPadding: EdgeInsets.zero,
-        // Make it full screen for better viewing
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // 1. Zoomable Image
             InteractiveViewer(
               minScale: 0.5,
               maxScale: 4.0,
               child: CommonUtil.getImageInDialogue(imagePath, dialogContext),
             ),
-
-            // 2. Stylish Close Button (Top Right)
             Positioned(
-              top: 10,
-              right: 10,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4),
-                  shape: BoxShape.circle,
-                ),
+              top: MediaQuery.of(context).padding.top + 10,
+              right: 20,
+              child: CircleAvatar(
+                backgroundColor: Colors.black.withValues(alpha: 0.4),
                 child: IconButton(
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                  // ✅ Use dialogContext to specifically pop the Dialog
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
                   onPressed: () => Navigator.of(dialogContext).pop(),
                 ),
               ),
             ),
-
-            // 3. Optional: Image Label (Bottom)
-            if (imageName != null)
-              Positioned(
-                bottom: 40,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    imageName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -434,15 +385,23 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildStatusIcon(String status) {
-    final Color readColor = Colors.blueGrey;
-
+    // Branding: Use White for 'Me' bubbles, Purple for 'Read' in Peer bubbles
+    // Since this is ONLY called if(isMe) in your logic, we use white variants
     switch (status) {
       case 'SENT':
-        return Icon(Icons.done_rounded, size: 14, color: Colors.white70);
+        return const Icon(Icons.done_rounded, size: 14, color: Colors.white70);
       case 'DELIVERED':
-        return Icon(Icons.done_all_rounded, size: 14, color: Colors.white70);
+        return const Icon(
+          Icons.done_all_rounded,
+          size: 14,
+          color: Colors.white70,
+        );
       case 'READ':
-        return Icon(Icons.done_all_rounded, size: 14, color: readColor);
+        return const Icon(
+          Icons.done_all_rounded,
+          size: 14,
+          color: Colors.white,
+        );
       default:
         return const SizedBox.shrink();
     }

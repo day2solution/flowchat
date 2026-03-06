@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui';
+import 'package:flowchat/config/app_style.dart';
 import 'package:flowchat/main.dart';
+import 'package:flowchat/util/ScreenUtil.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
@@ -37,12 +38,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
   String activeChatUser = "";
   Timer? _searchDebounce;
 
-  // Theme Colors (Matching your Unique Design)
-  final Color primaryColor = const Color(0xFFFF7F50); // Coral
-  final Color secondaryColor = const Color(0xFF6C63FF); // Purple-Blue
+  final Color primaryColor = AppStyle.primaryColor;
+  final Color secondaryColor = AppStyle.secondaryColor;
   static double? screenWidth;
   static double? screenHeight;
   static MediaQueryData? _mediaQueryData;
+
   @override
   void initState() {
     super.initState();
@@ -64,17 +65,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
     if (index != -1) {
       setState(() {
         _recentChats[index].online = status;
+        _repo.updateUserOnlineStatus(userId, status);
       });
     }
   }
 
   String getUserNameByContact(String contactNo) {
     try {
-      // Search the recent chats list for a matching contact number
       final user = _recentChats.firstWhere((u) => u.contactNo == contactNo);
       return user.name;
     } catch (e) {
-      // If no user is found with that contact number, return the number itself or "Unknown"
       return contactNo;
     }
   }
@@ -86,35 +86,38 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final isCurrentlyChatting = activeChatUser == message.senderId;
 
     if (!isMe && !isCurrentlyChatting) {
-      String displayName = getUserNameByContact(message.senderId ?? "");
-      saveLastMessage(
+      String displayName = getUserNameByContact(message.senderId);
+      await saveLastMessage(
         message.senderId,
         displayName,
         message.content,
         message.senderId,
       );
-      showNotification(message, displayName);
+      await showNotification(message, displayName);
       _loadRecentChats();
     }
   }
-
-  // ... (Keep logic: _handleIncoming, _loadRecentChats, _handlePresence, _onSearchChanged, _searchUsers identical)
 
   @override
   Widget build(BuildContext context) {
     _mediaQueryData = MediaQuery.of(context);
     screenWidth = _mediaQueryData!.size.width;
     screenHeight = _mediaQueryData!.size.height;
+
+    // Calculate responsive horizontal padding for the whole list
+    final horizontalPadding = screenWidth! / 25;
+
     final displayedUsers = _showSearch && _searchController.text.isNotEmpty
         ? _searchResults
         : _recentChats;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      // extendBodyBehindAppBar: true,
       appBar: AppBar(
-        toolbarHeight: screenWidth!/5,
+        // Responsive AppBar height based on width
+        // toolbarHeight: (screenHeight! / 5).clamp(70.0, 100.0),
         backgroundColor: Colors.transparent,
+        elevation: 0,
         flexibleSpace: _buildUniqueHeader(),
         automaticallyImplyLeading: false,
       ),
@@ -131,22 +134,27 @@ class _ChatListScreenState extends State<ChatListScreen> {
         },
         child: Column(
           children: [
-            // _buildUniqueHeader(),
             Expanded(
               child: Container(
-                color: const Color(0xFFF8F9FD), // Soft background
+                color: const Color(0xFFF8F9FD),
                 child: _isSearching
                     ? Center(
                         child: CircularProgressIndicator(color: primaryColor),
                       )
+                    : displayedUsers.isEmpty
+                    ? SingleChildScrollView(child: _buildEmptyState())
                     : ListView.builder(
-                        padding: const EdgeInsets.only(top: 10, bottom: 100),
-                        itemCount: displayedUsers.isEmpty
-                            ? 1
-                            : displayedUsers.length,
+                        // Responsive bottom padding for FAB clearance
+                        padding: EdgeInsets.only(
+                          top: 10,
+                          bottom: screenHeight! / 8,
+                        ),
+                        itemCount: displayedUsers.length,
                         itemBuilder: (ctx, i) {
-                          if (displayedUsers.isEmpty) return _buildEmptyState();
-                          return _buildSocialChatTile(displayedUsers[i]);
+                          return _buildSocialChatTile(
+                            displayedUsers[i],
+                            screenWidth,
+                          );
                         },
                       ),
               ),
@@ -161,50 +169,46 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget _buildUniqueHeader() {
     return Stack(
       children: [
-        // 1. Artistic Gradient Header (Matches Profile Screen)
         Container(
-          height: screenWidth!/3,
+          height: screenWidth! / 2,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [primaryColor, secondaryColor],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            // borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(60)),
           ),
         ),
-        // 2. Decorative Circle
         Positioned(
-          top: -40,
-          left: -40,
+          top: -screenWidth! / 10,
+          left: -screenWidth! / 10,
           child: CircleAvatar(
-            radius: 80,
-            backgroundColor: Colors.white.withOpacity(0.1),
+            radius: screenWidth! / 5,
+            backgroundColor: Colors.white.withValues(alpha: 0.1),
           ),
         ),
-        // 3. Header Content
         SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 10, 0),
-            child: Column(
+            // Responsive horizontal padding
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth! / 20,
+              vertical: 10,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _showSearch
-                        ? _buildSearchField()
-                        : const Text(
-                            "Messages",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                    _buildHeaderActions(),
-                  ],
-                ),
+                _showSearch
+                    ? _buildSearchField()
+                    : Text(
+                        "Messages",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: ScreenUtil().getAdaptiveSize(context, 16),
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                _buildHeaderActions(),
               ],
             ),
           ),
@@ -213,18 +217,24 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildSocialChatTile(User user) {
+  Widget _buildSocialChatTile(User user, double? screenWidth) {
     final lastMsg = user.lastMessage ?? "Say hi! 👋";
     final isImage = CommonUtil.isBase64(lastMsg);
+    // Dynamic Avatar Size
+    final double avatarRadius = (screenWidth! / 14).clamp(25.0, 35.0);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      // Responsive margins
+      margin: EdgeInsets.symmetric(
+        horizontal: screenWidth / 25,
+        vertical: screenHeight! / 120,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22), // Unique Squircular look
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -232,7 +242,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
       child: ListTile(
         onTap: () => _openChat(user),
-        contentPadding: const EdgeInsets.all(12),
+        contentPadding: EdgeInsets.all(screenWidth / 35),
         leading: Stack(
           children: [
             Container(
@@ -245,14 +255,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 ),
               ),
               child: CircleAvatar(
-                radius: 28,
+                radius: avatarRadius,
                 backgroundColor: Colors.grey.shade100,
                 backgroundImage: NetworkImage(
                   "${Environment.hostApiUrl}/uploads/profiles/${user.contactNo!}.gif",
                 ),
-                onBackgroundImageError: (exception, stackTrace) => {
-                  Logger.log("chat_list_screen", "image not found")
-                },
+                onBackgroundImageError: (_, __) =>
+                    Logger.log("chat_list_screen", "Image error"),
               ),
             ),
             if (user.online)
@@ -260,8 +269,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 right: 2,
                 bottom: 2,
                 child: Container(
-                  width: 14,
-                  height: 14,
+                  width: avatarRadius / 2,
+                  height: avatarRadius / 2,
                   decoration: BoxDecoration(
                     color: Colors.greenAccent,
                     shape: BoxShape.circle,
@@ -273,7 +282,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
         title: Text(
           user.name,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: ScreenUtil().getAdaptiveSize(context, 17),
+          ),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
@@ -283,6 +295,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: Colors.grey.shade600,
+              fontSize: ScreenUtil().getAdaptiveSize(context, 14),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -292,10 +305,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              CommonUtil().formatTimestamp(user.timestamp ?? 0),
+              user.timestamp != null
+                  ? CommonUtil().formatTimestamp(user.timestamp ?? 0)
+                  : "",
               style: TextStyle(
                 color: Colors.grey.shade400,
-                fontSize: 11,
+                fontSize: ScreenUtil().getAdaptiveSize(context, 11),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -311,9 +326,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 ),
                 child: Text(
                   "${user.unreadCount}",
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 10,
+                    fontSize: ScreenUtil().getAdaptiveSize(context, 10),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -327,23 +342,114 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget _buildSearchField() {
     return Expanded(
       child: Container(
-        height: 45,
+        height: (screenWidth! / 8).clamp(45.0, 55.0),
         padding: const EdgeInsets.symmetric(horizontal: 15),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white, // Solid white for better readability in search
           borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+            ),
+          ],
         ),
-        child: TextField(
-          controller: _searchController,
-          autofocus: true,
-          onChanged: _onSearchChanged,
-          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
-          decoration: InputDecoration(
-            hintText: 'Find friends...',
-            hintStyle: TextStyle(color: primaryColor),
-            border: InputBorder.none,
+        child: Center(
+          child: TextField(
+            controller: _searchController,
+            keyboardType: TextInputType.phone,
+            maxLength: 10,
+            autofocus: true,
+            onChanged: _onSearchChanged,
+            style: TextStyle(
+              color: primaryColor,
+              fontWeight: FontWeight.bold,
+              fontSize: ScreenUtil().getAdaptiveSize(context, 16),
+            ),
+            decoration: InputDecoration(
+              hintText: 'Find friends...',
+              counterText: "",
+              isDense: true,
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              border: InputBorder.none,
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFab() {
+    return Container(
+      height: (screenWidth! / 7).clamp(50.0, 65.0),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [primaryColor, const Color(0xFFFF4D4D)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: FloatingActionButton.extended(
+        onPressed: () => setState(() => _showSearch = true),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        icon: Icon(
+          Icons.add_comment_rounded,
+          color: Colors.white,
+          size: ScreenUtil().getAdaptiveSize(context, 20),
+        ),
+        label: Text(
+          "NEW CHAT",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: ScreenUtil().getAdaptiveSize(context, 10),
+            letterSpacing: 1,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      // Centers the empty state in the middle of the remaining screen height
+      height: screenHeight! - (screenWidth! / 3) - 100,
+      width: double.infinity,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.forum_outlined,
+            size: screenWidth! / 4,
+            color: primaryColor.withValues(alpha: 0.2),
+          ),
+          SizedBox(height: screenHeight! / 40),
+          Text(
+            "No Conversations",
+            style: TextStyle(
+              fontSize: ScreenUtil().getAdaptiveSize(context, 24),
+              fontWeight: FontWeight.w900,
+              color: Colors.grey.shade400,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Start a chat with your friends!",
+            style: TextStyle(
+              color: Colors.grey.shade400,
+              fontSize: ScreenUtil().getAdaptiveSize(context, 14),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -355,6 +461,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           icon: Icon(
             _showSearch ? Icons.close : Icons.search,
             color: Colors.white,
+            size: ScreenUtil().getAdaptiveSize(context, 18),
           ),
           onPressed: () => setState(() {
             _showSearch = !_showSearch;
@@ -365,31 +472,44 @@ class _ChatListScreenState extends State<ChatListScreen> {
           }),
         ),
         PopupMenuButton<String>(
-          icon: const Icon(
-            Icons.more_horiz_rounded,
+          icon: Icon(
+            Icons.more_vert_rounded,
             color: Colors.white,
-            size: 30,
+            size: ScreenUtil().getAdaptiveSize(context, 16),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
           onSelected: (value) => _handleMenuSelection(value),
           itemBuilder: (ctx) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: "settings",
               child: Text(
                 "Profile Settings",
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: ScreenUtil().getAdaptiveSize(context, 10),
+                ),
               ),
             ),
-            const PopupMenuItem(value: "refresh", child: Text("Refresh Chats")),
-            const PopupMenuItem(
+            PopupMenuItem(
+              value: "refresh",
+              child: Text(
+                "Delete Chats",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: ScreenUtil().getAdaptiveSize(context, 10),
+                ),
+              ),
+            ),
+            PopupMenuItem(
               value: "logout",
               child: Text(
                 "Logout",
                 style: TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.bold,
+                  fontSize: ScreenUtil().getAdaptiveSize(context, 10),
                 ),
               ),
             ),
@@ -399,40 +519,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildFab() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [primaryColor, const Color(0xFFFF4D4D)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withOpacity(0.4),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: FloatingActionButton.extended(
-        onPressed: () => setState(() => _showSearch = true),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        icon: const Icon(Icons.add_comment_rounded, color: Colors.white),
-        label: const Text(
-          "NEW CHAT",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --- Helpers ---
-  void _handleMenuSelection(String value) {
+  void _handleMenuSelection(String value) async {
     if (value == 'settings') {
       Navigator.push(
         context,
@@ -444,13 +531,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
       );
     } else if (value == 'logout') {
-      _repo.clearMyAccount();
+      await _repo.clearMyAccount();
+      await _repo.clearRecentChats();
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const ChatApp()),
         (route) => false,
       );
     } else if (value == 'refresh') {
+      // _de
+      _repo.clearRecentChats();
       _loadRecentChats();
     }
   }
@@ -465,38 +555,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
     setState(() => activeChatUser = "");
     _loadRecentChats();
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.forum_outlined,
-            size: 100,
-            color: primaryColor.withOpacity(0.2),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            "No Conversations",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: Colors.grey.shade400,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Start a chat with your friends!",
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> showNotification(ChatMessage message, String displayName) async {
@@ -524,7 +582,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     String notificationBody = CommonUtil.isBase64(message.content)
         ? "📷 Sent an image"
-        : (message.content ?? "You have a new message");
+        : (message.content);
 
     try {
       await flutterLocalNotificationsPlugin.show(
@@ -539,10 +597,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   void _onSearchChanged(String query) {
-    if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
-      _searchUsers(query);
-    });
+    if (query.isNotEmpty && query != widget.myAccount.contactNo) {
+      if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+        _searchUsers(query);
+      });
+    }
   }
 
   Future<void> _searchUsers(String query) async {
@@ -580,6 +640,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       lastMessage: msg,
       timestamp: DateTime.now().millisecondsSinceEpoch,
       profileImage: profileImage,
+      online: true,
     );
     await ChatDb().upsertChat(chat);
   }

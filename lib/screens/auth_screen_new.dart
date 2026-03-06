@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flowchat/util/ScreenUtil.dart';
 import 'package:flutter/material.dart';
 
 class AuthScreenNew extends StatefulWidget {
@@ -14,7 +15,7 @@ class _AuthScreenState extends State<AuthScreenNew> {
   final _contactController = TextEditingController();
   bool _isLoading = false;
 
-  // Unique Theme Colors (Matching your App Ecosystem)
+  // Unique Theme Colors
   final Color primaryColor = const Color(0xFFFF7F50); // Coral
   final Color secondaryColor = const Color(0xFF6C63FF); // Purple-Blue
 
@@ -37,7 +38,6 @@ class _AuthScreenState extends State<AuthScreenNew> {
     setState(() => _isLoading = true);
 
     try {
-      // Simulate a small delay for premium feel if needed, or just call onLogin
       widget.onLogin(loggedInContact);
     } finally {
       if (mounted) {
@@ -48,13 +48,16 @@ class _AuthScreenState extends State<AuthScreenNew> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. Unique Asymmetric Gradient Header (100px curve)
+          // 1. Unique Asymmetric Gradient Header
           Container(
-            height: MediaQuery.of(context).size.height * 0.48,
+            height: screenHeight * 0.48,
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -62,19 +65,21 @@ class _AuthScreenState extends State<AuthScreenNew> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(100),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(
+                  screenWidth * 0.25,
+                ), // Responsive curve
               ),
             ),
           ),
 
           // Decorative Background Circles
           Positioned(
-            top: -30,
-            right: -30,
+            top: -screenWidth * 0.1,
+            right: -screenWidth * 0.1,
             child: CircleAvatar(
-              radius: 80,
-              backgroundColor: Colors.white.withOpacity(0.1),
+              radius: screenWidth * 0.2,
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
             ),
           ),
 
@@ -82,22 +87,22 @@ class _AuthScreenState extends State<AuthScreenNew> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  const SizedBox(height: 50),
+                  SizedBox(height: screenHeight * 0.05),
 
                   // 2. High-End App Identity
-                  _buildLogoSection(),
+                  _buildLogoSection(screenWidth, screenHeight),
 
-                  const SizedBox(height: 40),
+                  SizedBox(height: screenHeight * 0.04),
 
                   // 3. Floating Login Card
-                  _buildLoginCard(),
+                  _buildLoginCard(screenWidth, screenHeight),
 
-                  const SizedBox(height: 40),
+                  SizedBox(height: screenHeight * 0.05),
 
                   // 4. Footer Legal Info
                   _buildFooter(),
 
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                 ],
               ),
             ),
@@ -107,27 +112,30 @@ class _AuthScreenState extends State<AuthScreenNew> {
     );
   }
 
-  Widget _buildLogoSection() {
+  Widget _buildLogoSection(double screenWidth, double screenHeight) {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(screenWidth * 0.05),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withValues(alpha: 0.15),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 2,
+            ),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.auto_awesome_rounded,
-            size: 60,
+            size: (screenWidth * 0.15).clamp(40, 70),
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 20),
-        const Text(
+        SizedBox(height: screenHeight * 0.02),
+        Text(
           "FlowChat",
           style: TextStyle(
-            fontSize: 36,
+            fontSize: ScreenUtil().getAdaptiveSize(context, 36),
             fontWeight: FontWeight.w900,
             color: Colors.white,
             letterSpacing: 1.5,
@@ -136,8 +144,8 @@ class _AuthScreenState extends State<AuthScreenNew> {
         Text(
           "Connect with your besties",
           style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
-            fontSize: 16,
+            color: Colors.white.withValues(alpha: 0.8),
+            fontSize: ScreenUtil().getAdaptiveSize(context, 16),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -145,17 +153,17 @@ class _AuthScreenState extends State<AuthScreenNew> {
     );
   }
 
-  Widget _buildLoginCard() {
+  Widget _buildLoginCard(double screenWidth, double screenHeight) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
       child: Container(
-        padding: const EdgeInsets.all(30),
+        padding: EdgeInsets.all(screenWidth * 0.08),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(35),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 30,
               offset: const Offset(0, 15),
             ),
@@ -164,10 +172,10 @@ class _AuthScreenState extends State<AuthScreenNew> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Welcome Back",
               style: TextStyle(
-                fontSize: 24,
+                fontSize: ScreenUtil().getAdaptiveSize(context, 24),
                 fontWeight: FontWeight.w900,
                 color: Colors.black87,
               ),
@@ -177,35 +185,33 @@ class _AuthScreenState extends State<AuthScreenNew> {
               "Enter your phone number to continue",
               style: TextStyle(
                 color: Colors.grey.shade500,
-                fontSize: 14,
+                fontSize: ScreenUtil().getAdaptiveSize(context, 14),
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 35),
+            SizedBox(height: screenHeight * 0.04),
 
-            // Unique Squircular Input
-            _buildPhoneInput(),
+            _buildPhoneInput(screenWidth),
 
-            const SizedBox(height: 30),
+            SizedBox(height: screenHeight * 0.04),
 
-            // Gradient Action Button
-            _buildContinueButton(),
+            _buildContinueButton(screenWidth, screenHeight),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPhoneInput() {
+  Widget _buildPhoneInput(double screenWidth) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "  PHONE NUMBER",
           style: TextStyle(
-            fontSize: 11,
+            fontSize: ScreenUtil().getAdaptiveSize(context, 11),
             fontWeight: FontWeight.w900,
-            color: secondaryColor.withOpacity(0.7),
+            color: secondaryColor.withValues(alpha: 0.7),
             letterSpacing: 1.2,
           ),
         ),
@@ -219,17 +225,26 @@ class _AuthScreenState extends State<AuthScreenNew> {
           child: TextField(
             controller: _contactController,
             keyboardType: TextInputType.phone,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            maxLength: 10,
+            style: TextStyle(
+              fontSize: ScreenUtil().getAdaptiveSize(context, 18),
+              fontWeight: FontWeight.bold,
+            ),
             decoration: InputDecoration(
               hintText: "e.g. 98765 43210",
-              hintStyle: TextStyle(color: Colors.grey.shade300, fontSize: 16),
+              hintStyle: TextStyle(
+                color: Colors.grey.shade300,
+                fontSize: ScreenUtil().getAdaptiveSize(context, 16),
+              ),
+              counterText: "",
               prefixIcon: Icon(
                 Icons.phone_iphone_rounded,
                 color: secondaryColor,
+                size: ScreenUtil().getAdaptiveSize(context, 20),
               ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 20,
+              contentPadding: EdgeInsets.symmetric(
+                vertical: (screenWidth * 0.05).clamp(15, 25),
                 horizontal: 16,
               ),
             ),
@@ -239,10 +254,10 @@ class _AuthScreenState extends State<AuthScreenNew> {
     );
   }
 
-  Widget _buildContinueButton() {
+  Widget _buildContinueButton(double screenWidth, double screenHeight) {
     return Container(
       width: double.infinity,
-      height: 62,
+      // height: (screenHeight * 0.08).clamp(55, 70),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
         gradient: LinearGradient(
@@ -250,7 +265,7 @@ class _AuthScreenState extends State<AuthScreenNew> {
         ),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.4),
+            color: primaryColor.withValues(alpha: 0.4),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -274,10 +289,10 @@ class _AuthScreenState extends State<AuthScreenNew> {
                   strokeWidth: 3,
                 ),
               )
-            : const Text(
+            : Text(
                 "CONTINUE",
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: ScreenUtil().getAdaptiveSize(context, 16),
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                   letterSpacing: 1,
@@ -294,7 +309,7 @@ class _AuthScreenState extends State<AuthScreenNew> {
         "By continuing, you agree to our Terms of Service and Privacy Policy",
         textAlign: TextAlign.center,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: ScreenUtil().getAdaptiveSize(context, 12),
           color: Colors.grey.shade400,
           fontWeight: FontWeight.w600,
           height: 1.5,

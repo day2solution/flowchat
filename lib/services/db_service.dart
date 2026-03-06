@@ -39,7 +39,8 @@ class DbService {
           name TEXT,
           lastMessage TEXT,
           timestamp INTEGER,
-          profileImage TEXT
+          profileImage TEXT,
+          online INTEGER DEFAULT 0
         )
       ''');
 
@@ -54,14 +55,14 @@ class DbService {
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < newVersion) {
-          // Add recent_chats table if upgrading from <4
           await db.execute('''
           CREATE TABLE IF NOT EXISTS recent_chats (
             contactNo TEXT PRIMARY KEY,
             name TEXT,
             lastMessage TEXT,
             timestamp INTEGER,
-            profileImage TEXT
+            profileImage TEXT,
+            online INTEGER DEFAULT 0
           )
         ''');
 
@@ -162,5 +163,18 @@ class DbService {
     final db = await database;
     await db.delete('my_account');
     Logger.log("db_service","my_account table cleared.");
+  }
+
+  Future<void> updateUserOnlineStatus(String contactNo, bool isOnline) async {
+    Logger.log("db_service", "Updating online status for $contactNo to $isOnline");
+    final db = await database;
+
+    // SQLite uses 1 for true and 0 for false
+    await db.update(
+      'recent_chats',
+      {'online': isOnline ? 1 : 0},
+      where: 'contactNo = ?',
+      whereArgs: [contactNo],
+    );
   }
 }

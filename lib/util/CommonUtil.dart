@@ -35,7 +35,7 @@ class CommonUtil {
   }
 
   static getYYYYMMDDStringDate(String date) {
-    Logger.log("CommonUtil",'date=$date');
+    Logger.log("CommonUtil", 'date=$date');
     DateTime dateTime = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse(date);
     DateFormat outputFormat = DateFormat('yyyy-MM-dd');
     String outputDate = outputFormat.format(dateTime);
@@ -118,7 +118,7 @@ class CommonUtil {
   }
 
   static String convertToTitleCase(String text) {
-    Logger.log("CommonUtil",'text to capitalize=$text');
+    Logger.log("CommonUtil", 'text to capitalize=$text');
     if (isBlank(text)) {
       return "-";
     } else {
@@ -138,7 +138,7 @@ class CommonUtil {
   }
 
   static String convertToTitleCaseReturnDash(String text) {
-    Logger.log("CommonUtil",'text to capitalize=$text');
+    Logger.log("CommonUtil", 'text to capitalize=$text');
     if (text == null) {
       return "-";
     }
@@ -148,7 +148,7 @@ class CommonUtil {
     }
     text = text.trim().replaceAll(RegExp(' +'), ' ');
     final List<String> words = text.split(' ');
-    Logger.log("CommonUtil",'words=$words');
+    Logger.log("CommonUtil", 'words=$words');
     final capitalizedWords = words.map((word) {
       final String firstLetter = word.substring(0, 1).toUpperCase();
       final String remainingLetters = word.substring(1).toLowerCase();
@@ -158,42 +158,6 @@ class CommonUtil {
     return capitalizedWords.join(' ');
   }
 
-  // static Future<String> convertImgToBase64Str(XFile pfile) async{
-  //   String base64Image="";
-  //   File file=File (pfile.path);
-  //   File futureFile= await testCompressAndGetFile(file);
-  //   base64Image = base64Encode(futureFile.readAsBytesSync());
-  //   return base64Image;
-  // }
-  // static Future<File> testCompressAndGetFile(File file) async {
-  //   int imgQuality=100;
-  //   double ogFileSize=file.lengthSync()/1024;
-  //   Logger.log("CommonUtil","image original size in KB="+ogFileSize.toString()+" KB");
-  //
-  //   if(ogFileSize>100 && ogFileSize<200){
-  //     imgQuality=90;
-  //   }
-  //   if(ogFileSize>200 && ogFileSize<300){
-  //     imgQuality=80;
-  //   }
-  //   if(ogFileSize>300 && ogFileSize<400){
-  //     imgQuality=70;
-  //   }
-  //   if(ogFileSize>400){
-  //     imgQuality=30;
-  //   }
-  //   ogFileSize=ogFileSize/1024;
-  //   Logger.log("CommonUtil","image original size in MB="+ogFileSize.toString()+" MB");
-  //   Logger.log("CommonUtil",'imgQuality=$imgQuality');
-  //   File compressedFile = await FlutterNativeImage.compressImage(file.path,
-  //       quality: imgQuality, percentage: 100);
-  //
-  //   ogFileSize=compressedFile.lengthSync()/1024;
-  //   Logger.log("CommonUtil","image compressed size in KB="+ogFileSize.toString()+" KB");
-  //   ogFileSize=ogFileSize/1024;
-  //   Logger.log("CommonUtil","image compressed size in MB="+ogFileSize.toString()+" MB");
-  //   return compressedFile;
-  // }
   static Widget getImageInDialogue(String base64String, BuildContext context) {
     _mediaQueryData = MediaQuery.of(context);
     screenWidth = _mediaQueryData!.size.width;
@@ -290,12 +254,6 @@ class CommonUtil {
       width: 200,
       fit: BoxFit.cover,
     );
-    // return AssetImage(
-    //   fileName,
-    //   height: 200,
-    //   width:200,
-    //   fit: BoxFit.fill,
-    // );
   }
 
   static Future<String> saveBase64Image(
@@ -303,7 +261,7 @@ class CommonUtil {
     String fileName,
   ) async {
     try {
-      Logger.log("CommonUtil","fileName=$fileName");
+      Logger.log("CommonUtil", "fileName=$fileName");
 
       // Decode Base64 String
       Uint8List bytes = base64Decode(base64String);
@@ -316,10 +274,10 @@ class CommonUtil {
       File imgFile = File(filePath);
       await imgFile.writeAsBytes(bytes);
 
-      Logger.log("CommonUtil",'Image saved at: $filePath');
+      Logger.log("CommonUtil", 'Image saved at: $filePath');
       return filePath;
     } catch (e) {
-      Logger.log("CommonUtil",'Error saving image: $e');
+      Logger.log("CommonUtil", 'Error saving image: $e');
       return '';
     }
   }
@@ -340,10 +298,10 @@ class CommonUtil {
       File imgFile = File(filePath);
       await imgFile.writeAsBytes(bytes);
 
-      Logger.log("CommonUtil",'video saved at: $filePath');
+      Logger.log("CommonUtil", 'video saved at: $filePath');
       return filePath;
     } catch (e) {
-      Logger.log("CommonUtil",'Error saving video: $e');
+      Logger.log("CommonUtil", 'Error saving video: $e');
       return '';
     }
   }
@@ -402,17 +360,17 @@ class CommonUtil {
   }
 
   static bool isValidEmail(String input) {
-    Logger.log("CommonUtil","validating");
+    Logger.log("CommonUtil", "validating");
     return RegExp(
       r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
     ).hasMatch(input);
   }
 
   static bool isEqualBothString(String input1, String input2) {
-    Logger.log("CommonUtil",'input1=$input1 input2=$input2');
+    Logger.log("CommonUtil", 'input1=$input1 input2=$input2');
     if (!isBlank(input1) && !isBlank(input2)) {
       if (input1.toUpperCase().trim() == input2.toUpperCase().trim()) {
-        Logger.log("CommonUtil",'true found');
+        Logger.log("CommonUtil", 'true found');
         return true;
       } else {
         return false;
@@ -513,15 +471,15 @@ class CommonUtil {
     String base64String,
     BuildContext context,
   ) {
-    Logger.log("CommonUtil",'base64String in OG=$base64String');
+    Logger.log("CommonUtil", 'base64String in OG=$base64String');
     _mediaQueryData = MediaQuery.of(context);
     screenWidth = _mediaQueryData!.size.width;
     screenHeight = _mediaQueryData!.size.height;
-    Logger.log("CommonUtil",'screenHeight in OG=$screenHeight');
+    Logger.log("CommonUtil", 'screenHeight in OG=$screenHeight');
     var image;
     if (base64String != null && base64String != "") {
       List<String> list = base64String.split(",");
-      Logger.log("CommonUtil",list.toString());
+      Logger.log("CommonUtil", list.toString());
       String finalImg = "";
       if (list[0].startsWith("data:image/jpeg;")) {
         finalImg = list[1];
@@ -715,7 +673,7 @@ class CommonUtil {
   }
 
   static bool isBlank(String str) {
-    Logger.log("CommonUtil","str=$str");
+    Logger.log("CommonUtil", "str=$str");
     if (str == null || str == "" || str.isEmpty) {
       return true;
     }
@@ -723,7 +681,7 @@ class CommonUtil {
   }
 
   static bool isAlphaNumericOnly(String text) {
-    Logger.log("CommonUtil","text=$text");
+    Logger.log("CommonUtil", "text=$text");
     return RegExp(r'^[a-zA-Z0-9]+$').hasMatch(text);
   }
 
@@ -803,7 +761,7 @@ class CommonUtil {
   // }
 
   static String convertToIndianCurrency(double amount) {
-    Logger.log("CommonUtil","amount=${amount}");
+    Logger.log("CommonUtil", "amount=${amount}");
     if (amount == null) {
       amount = 0;
     }
@@ -848,8 +806,8 @@ class CommonUtil {
 
   static bool isBase64(String str) {
     bool isImage = str.startsWith("data:image/jpeg;base64");
-    Logger.log("CommonUtil","isImage=$isImage");
-    Logger.log("CommonUtil","str=" + str);
+    Logger.log("CommonUtil", "isImage=$isImage");
+    Logger.log("CommonUtil", "str=" + str);
     if (!str.startsWith("data:image/jpeg;base64")) return false;
     return true;
   }

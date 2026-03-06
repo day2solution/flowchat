@@ -25,23 +25,29 @@ class ApiService {
     }
   }
   Future<MyAccount?> fetchUserData(String contactNo) async {
-    String url='$_baseUrl/api/auth/login/$contactNo';
-    Logger.log("api-service","url=$url");
-    final response = await http.get(Uri.parse(url));
+    try {
+      String url = '$_baseUrl/api/auth/login/$contactNo';
+      Logger.log("api-service", "url=$url");
+      final response = await http.get(Uri.parse(url));
 
-    if (response.statusCode == 200) {
-      // Use the helper function to parse the entire response
-      final apiResponse = apiResponseFromJson(response.body);
+      if (response.statusCode == 200) {
+        // Use the helper function to parse the entire response
+        final apiResponse = apiResponseFromJson(response.body);
 
-      if (apiResponse.status == "SUCCESS") {
-        // Return the nested 'data' object which is of type MyAccount
-        Logger.log("api-service","success found");
-        return apiResponse.data;
+        if (apiResponse.status == "SUCCESS") {
+          // Return the nested 'data' object which is of type MyAccount
+          Logger.log("api-service", "success found");
+          return apiResponse.data;
+        }
       }
+      Logger.log("api-service", "failure found");
+      // Return null if the request failed or status is not SUCCESS
+      return null;
     }
-    Logger.log("api-service","failure found");
-    // Return null if the request failed or status is not SUCCESS
-    return null;
+    catch(e) {
+      Logger.log("api-service", 'Error in fetchUserData: $e');
+      return null;
+    }
   }
 
   Future<ApiResponse?> updateUserFullName(Map<String, String> userData) async {

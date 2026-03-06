@@ -27,8 +27,8 @@ class AppStyle {
       1003: Color(0xff652008),
     },
   );
-  static const int _companyPrimaryColor = 0xFFFF6B6B;
-  static const int _companySecondaryColor = 0xFFFFD93D;
+  static const int _companyPrimaryColor = 0xFFFF7F50;
+  static const int _companySecondaryColor = 0xFF6C63FF;
   static getGap20(){
     return SizedBox(
       height: 20.0,

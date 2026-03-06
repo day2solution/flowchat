@@ -28,6 +28,7 @@ class ChatRepository {
   Future<List<MyAccount>> getMyAccount(String contactNo) => _db.getMyAccount(contactNo);
   Future<List<MyAccount>> getAllMyAccount() => _db.getAllMyAccount();
   Future<void> clearMyAccount() => _db.clearMyAccount();
+  Future<void> updateUserOnlineStatus(String contactNo, bool isOnline) => _db.updateUserOnlineStatus(contactNo, isOnline);
 
   void onIncoming(void Function(ChatMessage) cb) => _ws.onMessage(cb);
   void onMsgStatus(void Function(String,String) cb) => _ws.onMsgStatusAction(cb);
