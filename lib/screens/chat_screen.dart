@@ -270,7 +270,7 @@ class _ChatScreenState extends State<ChatScreen> {
         padding: isImage
             ? const EdgeInsets.all(5)
             : EdgeInsets.symmetric(
-                horizontal: screenWidth * 0.04,
+                horizontal: screenWidth * 0.01,
                 vertical: 12,
               ),
         constraints: BoxConstraints(maxWidth: screenWidth * 0.78),

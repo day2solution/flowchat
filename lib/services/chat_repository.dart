@@ -16,6 +16,7 @@ class ChatRepository {
   // final ChatDb _chatDb = ChatDb();
   final ApiService _apiService = ApiService();
   void connectUser(String userId) => _ws.connect(userId);
+  void disconnect()=> _ws.disconnect();
 
   void sendText(String chatId, String senderId, String content,String receiverId) => _ws.sendTextMessage(chatId, senderId, content,receiverId);
 

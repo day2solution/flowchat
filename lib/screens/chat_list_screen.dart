@@ -47,6 +47,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   void initState() {
     super.initState();
+    _repo.connectUser(widget.myAccount.contactNo);
     _repo.onUserPresence(_handlePresence);
     _repo.onIncoming(_handleIncoming);
     _repo.saveMyAccount(widget.myAccount);
@@ -531,8 +532,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
       );
     } else if (value == 'logout') {
+      _repo.disconnect();
       await _repo.clearMyAccount();
       await _repo.clearRecentChats();
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const ChatApp()),

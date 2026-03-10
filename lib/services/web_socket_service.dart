@@ -9,12 +9,15 @@ import 'db_service.dart';
 
 class WebSocketService {
   static final WebSocketService _instance = WebSocketService._internal();
+
   factory WebSocketService() => _instance;
+
   WebSocketService._internal();
 
   IOWebSocketChannel? _channel;
   String? _userId;
   bool _isConnected = false; // ✅ Track actual connection state
+  bool _isManualLogout = false;
   static const _uuid = Uuid();
 
   // ✅ Queue to hold messages sent while offline
@@ -30,69 +33,78 @@ class WebSocketService {
     _userId = userId;
     _isConnected = false; // Reset state
 
-    Logger.log("web_socket_service",'WebSocket connecting for: $userId');
+    Logger.log("web_socket_service", 'WebSocket connecting for: $userId');
 
     final url = '${Environment.socketUrl}/ws/chat?userId=$userId';
-    Logger.log("web_socket_service",'🌐 Attempting connection to: $url');
+    Logger.log("web_socket_service", '🌐 Attempting connection to: $url');
     try {
       _channel = IOWebSocketChannel.connect(Uri.parse(url));
 
-      _channel!.stream.listen((data) async {
-        // ✅ Once we receive any data, we know the connection is active
-        if (!_isConnected) {
-          _isConnected = true;
-          _flushQueue(); // Send pending messages
-        }
-
-        try {
-          final map = jsonDecode(data);
-          final action = map['action'];
-
-          switch (action) {
-            case 'message':
-              final msg = ChatMessage(
-                id: map['id'] ?? _uuid.v4(),
-                receiverId: map['receiverId'],
-                senderId: map['sender']['id'],
-                content: map['content'],
-                timestamp: DateTime.parse(map['timestamp']),
-                status: map['status'] ?? 'SENT',
-              );
-              _sendDeliveredAck(msg.id, msg.senderId);
-              await DbService().insertMessage(msg);
-              for (var l in _messageListeners) l(msg);
-              break;
-            case 'delivered':
-              final messageId = map['id'];
-              await DbService().updateMessageStatus(messageId, 'DELIVERED');
-              for (var l in _msgStatusListeners) l(messageId, 'DELIVERED');
-              break;
-            case 'read':
-              final messageId = map['id'];
-              await DbService().updateMessageStatus(messageId, 'READ');
-              for (var l in _msgStatusListeners) l(messageId, 'READ');
-              break;
-            case 'presence':
-              for (var l in _presenceListeners) l(map['userId'], map['online'] == true);
-              break;
-            case 'typing':
-              for (var l in _typingListeners) l(map['senderId']);
-              break;
+      _channel!.stream.listen(
+        (data) async {
+          // ✅ Once we receive any data, we know the connection is active
+          if (!_isConnected) {
+            _isConnected = true;
+            _flushQueue(); // Send pending messages
           }
-        } catch (e) {
-          Logger.log("web_socket_service",'WS parse error $e');
-        }
-      }, onDone: () {
-        Logger.log("web_socket_service",'WebSocket closed');
-        _isConnected = false;
-        reconnect(userId);
-      }, onError: (err) {
-        Logger.log("web_socket_service",'WebSocket error: $err');
-        _isConnected = false;
-        reconnect(userId);
-      });
+
+          try {
+            final map = jsonDecode(data);
+            final action = map['action'];
+
+            switch (action) {
+              case 'message':
+                final msg = ChatMessage(
+                  id: map['id'] ?? _uuid.v4(),
+                  receiverId: map['receiverId'],
+                  senderId: map['sender']['id'],
+                  content: map['content'],
+                  timestamp: DateTime.parse(map['timestamp']),
+                  status: map['status'] ?? 'SENT',
+                );
+                _sendDeliveredAck(msg.id, msg.senderId);
+                await DbService().insertMessage(msg);
+                for (var l in _messageListeners) l(msg);
+                break;
+              case 'delivered':
+                final messageId = map['id'];
+                await DbService().updateMessageStatus(messageId, 'DELIVERED');
+                for (var l in _msgStatusListeners) l(messageId, 'DELIVERED');
+                break;
+              case 'read':
+                final messageId = map['id'];
+                await DbService().updateMessageStatus(messageId, 'READ');
+                for (var l in _msgStatusListeners) l(messageId, 'READ');
+                break;
+              case 'presence':
+                for (var l in _presenceListeners)
+                  l(map['userId'], map['online'] == true);
+                break;
+              case 'typing':
+                for (var l in _typingListeners) l(map['senderId']);
+                break;
+            }
+          } catch (e) {
+            Logger.log("web_socket_service", 'WS parse error $e');
+          }
+        },
+        onDone: () {
+          Logger.log("web_socket_service", 'WebSocket closed');
+          _isConnected = false;
+          if (!_isManualLogout) {
+            reconnect(userId);
+          } else {
+            Logger.log("socket", "Stopped reconnect because of manual logout");
+          }
+        },
+        onError: (err) {
+          Logger.log("web_socket_service", 'WebSocket error: $err');
+          _isConnected = false;
+          reconnect(userId);
+        },
+      );
     } catch (e) {
-      Logger.log("web_socket_service","Connection error: $e");
+      Logger.log("web_socket_service", "Connection error: $e");
       reconnect(userId);
     }
   }
@@ -105,13 +117,16 @@ class WebSocketService {
       try {
         _channel!.sink.add(data);
       } catch (e) {
-        Logger.log("web_socket_service","❌ Sink error: $e");
+        Logger.log("web_socket_service", "❌ Sink error: $e");
         _isConnected = false;
         _messageQueue.add(data);
         _attemptReconnect();
       }
     } else {
-      Logger.log("web_socket_service","⏳ Socket not ready. Adding message to queue.");
+      Logger.log(
+        "web_socket_service",
+        "⏳ Socket not ready. Adding message to queue.",
+      );
       _messageQueue.add(data);
 
       // If we aren't connected and not currently trying to connect, start connection
@@ -121,13 +136,14 @@ class WebSocketService {
     }
   }
 
-  bool _isReconnecting = false; // Prevents multiple simultaneous reconnect timers
+  bool _isReconnecting =
+      false; // Prevents multiple simultaneous reconnect timers
 
   void _attemptReconnect() {
     if (_isReconnecting || _userId == null) return;
 
     _isReconnecting = true;
-    Logger.log("web_socket_service","🔄 Reconnect triggered for $_userId");
+    Logger.log("web_socket_service", "🔄 Reconnect triggered for $_userId");
 
     Future.delayed(const Duration(seconds: 3), () {
       _isReconnecting = false;
@@ -145,14 +161,22 @@ class WebSocketService {
 
   // ✅ Send all queued messages once reconnected
   void _flushQueue() {
-    Logger.log("web_socket_service","🚀 Flushing queue: ${_messageQueue.length} messages");
+    Logger.log(
+      "web_socket_service",
+      "🚀 Flushing queue: ${_messageQueue.length} messages",
+    );
     while (_messageQueue.isNotEmpty) {
       final data = _messageQueue.removeAt(0);
       _channel?.sink.add(data);
     }
   }
 
-  void sendTextMessage(String chatId, String senderId, String content, String receiverId) {
+  void sendTextMessage(
+    String chatId,
+    String senderId,
+    String content,
+    String receiverId,
+  ) {
     final id = _uuid.v4();
     final payload = {
       "action": "message",
@@ -204,12 +228,18 @@ class WebSocketService {
   }
 
   void onMessage(void Function(ChatMessage) cb) => _messageListeners.add(cb);
-  void onMsgStatusAction(void Function(String, String) cb) => _msgStatusListeners.add(cb);
+
+  void onMsgStatusAction(void Function(String, String) cb) =>
+      _msgStatusListeners.add(cb);
+
   void onTyping(void Function(String) cb) => _typingListeners.add(cb);
-  void onUserPresence(void Function(String, bool) cb) => _presenceListeners.add(cb);
+
+  void onUserPresence(void Function(String, bool) cb) =>
+      _presenceListeners.add(cb);
 
   void disconnect() {
-    Logger.log("web_socket_service","Disconnecting...");
+    Logger.log("web_socket_service", "Disconnecting...");
+    _isManualLogout = true;
     _isConnected = false;
     _channel?.sink.close();
     _channel = null;

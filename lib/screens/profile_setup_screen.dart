@@ -380,7 +380,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     try {
       final fetchedAccount = await _repo.updateMyProfile(dbAccount, context);
       if (mounted) {
-        WebSocketService().connect(dbAccount.contactNo);
         if (widget.isNewProfile) {
           Navigator.pushReplacement(
             context,

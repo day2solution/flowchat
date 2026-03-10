@@ -58,7 +58,6 @@ class _ChatAppState extends State<ChatApp> {
     final accList = await _repo.getAllMyAccount();
     if (accList.isNotEmpty) {
       dbMyAccount = accList.first;
-      WebSocketService().connect(dbMyAccount!.contactNo);
     }
     setState(() => _isDbChecked = true);
   }
