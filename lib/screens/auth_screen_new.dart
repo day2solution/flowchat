@@ -50,14 +50,16 @@ class _AuthScreenState extends State<AuthScreenNew> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+    // 1. Detect Tablet
+    final bool isTablet = screenWidth > 600;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. Unique Asymmetric Gradient Header
+          // 2. Adaptive Asymmetric Gradient Header
           Container(
-            height: screenHeight * 0.48,
+            height: screenHeight * (isTablet ? 0.55 : 0.48),
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -67,43 +69,49 @@ class _AuthScreenState extends State<AuthScreenNew> {
               ),
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(
-                  screenWidth * 0.25,
-                ), // Responsive curve
+                  isTablet ? screenWidth * 0.15 : screenWidth * 0.25,
+                ),
               ),
             ),
           ),
 
-          // Decorative Background Circles
+          // Decorative Background Circles (Scaled)
           Positioned(
             top: -screenWidth * 0.1,
             right: -screenWidth * 0.1,
             child: CircleAvatar(
-              radius: screenWidth * 0.2,
+              radius: isTablet ? 100 : screenWidth * 0.2,
               backgroundColor: Colors.white.withValues(alpha: 0.1),
             ),
           ),
 
           SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  SizedBox(height: screenHeight * 0.05),
+            child: Center( // 3. Center content for Tablet
+              child: Container(
+                // 4. CONSTRAINT: Limit width on tablet for readability
+                constraints: BoxConstraints(maxWidth: isTablet ? 500 : double.infinity),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      SizedBox(height: isTablet ? 40 : screenHeight * 0.05),
 
-                  // 2. High-End App Identity
-                  _buildLogoSection(screenWidth, screenHeight),
+                      // High-End App Identity (Responsive)
+                      _buildLogoSection(screenWidth, screenHeight, isTablet),
 
-                  SizedBox(height: screenHeight * 0.04),
+                      SizedBox(height: isTablet ? 50 : screenHeight * 0.04),
 
-                  // 3. Floating Login Card
-                  _buildLoginCard(screenWidth, screenHeight),
+                      // Floating Login Card (Responsive)
+                      _buildLoginCard(screenWidth, screenHeight, isTablet),
 
-                  SizedBox(height: screenHeight * 0.05),
+                      SizedBox(height: isTablet ? 60 : screenHeight * 0.05),
 
-                  // 4. Footer Legal Info
-                  _buildFooter(),
+                      // Footer Legal Info
+                      _buildFooter(isTablet),
 
-                  SizedBox(height: 20),
-                ],
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -112,11 +120,11 @@ class _AuthScreenState extends State<AuthScreenNew> {
     );
   }
 
-  Widget _buildLogoSection(double screenWidth, double screenHeight) {
+  Widget _buildLogoSection(double screenWidth, double screenHeight, bool isTablet) {
     return Column(
       children: [
         Container(
-          padding: EdgeInsets.all(screenWidth * 0.05),
+          padding: EdgeInsets.all(isTablet ? 30 : screenWidth * 0.05),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.15),
             shape: BoxShape.circle,
@@ -127,7 +135,7 @@ class _AuthScreenState extends State<AuthScreenNew> {
           ),
           child: Icon(
             Icons.auto_awesome_rounded,
-            size: (screenWidth * 0.15).clamp(40, 70),
+            size: isTablet ? 70 : (screenWidth * 0.15).clamp(40, 70),
             color: Colors.white,
           ),
         ),
@@ -135,7 +143,7 @@ class _AuthScreenState extends State<AuthScreenNew> {
         Text(
           "FlowChat",
           style: TextStyle(
-            fontSize: ScreenUtil().getAdaptiveSize(context, 36),
+            fontSize: isTablet ? 44 : ScreenUtil().getAdaptiveSize(context, 36),
             fontWeight: FontWeight.w900,
             color: Colors.white,
             letterSpacing: 1.5,
@@ -145,7 +153,7 @@ class _AuthScreenState extends State<AuthScreenNew> {
           "Connect with your besties",
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.8),
-            fontSize: ScreenUtil().getAdaptiveSize(context, 16),
+            fontSize: isTablet ? 18 : ScreenUtil().getAdaptiveSize(context, 16),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -153,11 +161,11 @@ class _AuthScreenState extends State<AuthScreenNew> {
     );
   }
 
-  Widget _buildLoginCard(double screenWidth, double screenHeight) {
+  Widget _buildLoginCard(double screenWidth, double screenHeight, bool isTablet) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+      padding: EdgeInsets.symmetric(horizontal: isTablet ? 20 : screenWidth * 0.06),
       child: Container(
-        padding: EdgeInsets.all(screenWidth * 0.08),
+        padding: EdgeInsets.all(isTablet ? 40 : screenWidth * 0.08),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(35),
@@ -175,7 +183,7 @@ class _AuthScreenState extends State<AuthScreenNew> {
             Text(
               "Welcome Back",
               style: TextStyle(
-                fontSize: ScreenUtil().getAdaptiveSize(context, 24),
+                fontSize: isTablet ? 28 : ScreenUtil().getAdaptiveSize(context, 24),
                 fontWeight: FontWeight.w900,
                 color: Colors.black87,
               ),
@@ -185,31 +193,31 @@ class _AuthScreenState extends State<AuthScreenNew> {
               "Enter your phone number to continue",
               style: TextStyle(
                 color: Colors.grey.shade500,
-                fontSize: ScreenUtil().getAdaptiveSize(context, 14),
+                fontSize: isTablet ? 16 : ScreenUtil().getAdaptiveSize(context, 14),
                 fontWeight: FontWeight.w500,
               ),
             ),
-            SizedBox(height: screenHeight * 0.04),
+            SizedBox(height: isTablet ? 40 : screenHeight * 0.04),
 
-            _buildPhoneInput(screenWidth),
+            _buildPhoneInput(screenWidth, isTablet),
 
-            SizedBox(height: screenHeight * 0.04),
+            SizedBox(height: isTablet ? 40 : screenHeight * 0.04),
 
-            _buildContinueButton(screenWidth, screenHeight),
+            _buildContinueButton(screenWidth, screenHeight, isTablet),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPhoneInput(double screenWidth) {
+  Widget _buildPhoneInput(double screenWidth, bool isTablet) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "  PHONE NUMBER",
           style: TextStyle(
-            fontSize: ScreenUtil().getAdaptiveSize(context, 11),
+            fontSize: isTablet ? 13 : ScreenUtil().getAdaptiveSize(context, 11),
             fontWeight: FontWeight.w900,
             color: secondaryColor.withValues(alpha: 0.7),
             letterSpacing: 1.2,
@@ -227,24 +235,24 @@ class _AuthScreenState extends State<AuthScreenNew> {
             keyboardType: TextInputType.phone,
             maxLength: 10,
             style: TextStyle(
-              fontSize: ScreenUtil().getAdaptiveSize(context, 18),
+              fontSize: isTablet ? 20 : ScreenUtil().getAdaptiveSize(context, 18),
               fontWeight: FontWeight.bold,
             ),
             decoration: InputDecoration(
               hintText: "e.g. 98765 43210",
               hintStyle: TextStyle(
                 color: Colors.grey.shade300,
-                fontSize: ScreenUtil().getAdaptiveSize(context, 16),
+                fontSize: isTablet ? 18 : ScreenUtil().getAdaptiveSize(context, 16),
               ),
               counterText: "",
               prefixIcon: Icon(
                 Icons.phone_iphone_rounded,
                 color: secondaryColor,
-                size: ScreenUtil().getAdaptiveSize(context, 20),
+                size: isTablet ? 26 : ScreenUtil().getAdaptiveSize(context, 20),
               ),
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(
-                vertical: (screenWidth * 0.05).clamp(15, 25),
+                vertical: isTablet ? 22 : (screenWidth * 0.05).clamp(15, 25),
                 horizontal: 16,
               ),
             ),
@@ -254,10 +262,10 @@ class _AuthScreenState extends State<AuthScreenNew> {
     );
   }
 
-  Widget _buildContinueButton(double screenWidth, double screenHeight) {
+  Widget _buildContinueButton(double screenWidth, double screenHeight, bool isTablet) {
     return Container(
       width: double.infinity,
-      // height: (screenHeight * 0.08).clamp(55, 70),
+      height: isTablet ? 65 : null, // Fixed height for tablet button
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
         gradient: LinearGradient(
@@ -279,37 +287,38 @@ class _AuthScreenState extends State<AuthScreenNew> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
           ),
+          padding: EdgeInsets.symmetric(vertical: isTablet ? 0 : 15),
         ),
         child: _isLoading
             ? const SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 3,
-                ),
-              )
+          height: 24,
+          width: 24,
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 3,
+          ),
+        )
             : Text(
-                "CONTINUE",
-                style: TextStyle(
-                  fontSize: ScreenUtil().getAdaptiveSize(context, 16),
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  letterSpacing: 1,
-                ),
-              ),
+          "CONTINUE",
+          style: TextStyle(
+            fontSize: isTablet ? 18 : ScreenUtil().getAdaptiveSize(context, 16),
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: 1,
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(bool isTablet) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Text(
         "By continuing, you agree to our Terms of Service and Privacy Policy",
         textAlign: TextAlign.center,
         style: TextStyle(
-          fontSize: ScreenUtil().getAdaptiveSize(context, 12),
+          fontSize: isTablet ? 14 : ScreenUtil().getAdaptiveSize(context, 12),
           color: Colors.grey.shade400,
           fontWeight: FontWeight.w600,
           height: 1.5,

@@ -18,10 +18,11 @@ final ChatRepository _repo = ChatRepository();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Set system navigation bar and status bar to be transparent/clean
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
   await DbService().init();
@@ -44,22 +45,37 @@ class _ChatAppState extends State<ChatApp> {
   MyAccount? dbMyAccount;
   bool _isDbChecked = false;
 
+  // FIX: Use a unique key for MaterialApp to force a clean slate on logout
+  Key _appKey = UniqueKey();
+
   @override
   void initState() {
     super.initState();
     Logger.log("main","env=${Environment.environment}");
-    Logger.log("main","hostApiUrl=${Environment.hostApiUrl}");
-    Logger.log("main","socketUrl=${Environment.socketUrl}");
-    Logger.log("main","debugMode=${Environment.debugMode}");
     _checkAndSetAccount();
   }
 
   Future<void> _checkAndSetAccount() async {
     final accList = await _repo.getAllMyAccount();
-    if (accList.isNotEmpty) {
-      dbMyAccount = accList.first;
-    }
-    setState(() => _isDbChecked = true);
+    setState(() {
+      if (accList.isNotEmpty) {
+        dbMyAccount = accList.first;
+      } else {
+        dbMyAccount = null; // Ensure null if empty
+      }
+      _isDbChecked = true;
+    });
+  }
+
+  // FIX: Clean reset for logout
+  void restartApp() {
+    setState(() {
+      myAccount = null;
+      dbMyAccount = null;
+      _isDbChecked = false;
+      _appKey = UniqueKey(); // Force MaterialApp to dispose of all old keys
+    });
+    _checkAndSetAccount();
   }
 
   Future<void> _onLogin(String contactNo) async {
@@ -77,65 +93,72 @@ class _ChatAppState extends State<ChatApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Unique Social/Friendship Color Palette (Coral & Sunset)
-    const primaryBrandColor = AppStyle.primaryColor; // Soft Coral
-    const secondaryBrandColor = AppStyle.secondaryColor; // Warm Sunny Yellow
+    return LayoutBuilder(builder: (context, constraints) {
+      final bool isTablet = constraints.maxWidth > 600;
 
-    if (!_isDbChecked) {
-      return const MaterialApp(
+      if (!_isDbChecked) {
+        return MaterialApp(
+          key: const ValueKey('loading'),
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: AppStyle.primaryColor,
+              ),
+            ),
+          ),
+        );
+      }
+
+      return MaterialApp(
+        key: _appKey, // FIX: Apply the UniqueKey here
+        title: 'FlowChat',
         debugShowCheckedModeBanner: false,
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
-      );
-    }
-
-    return MaterialApp(
-      title: 'Friendship Chat',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryBrandColor,
-          primary: primaryBrandColor,
-          secondary: secondaryBrandColor,
-          surface: Colors.white,
-        ),
-        // Modernized AppBar for social feel
-        appBarTheme: const AppBarTheme(
-          centerTitle: false,
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          titleTextStyle: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800, // Thicker font for social "vibes"
-            color: Colors.black87,
-            letterSpacing: -0.5,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppStyle.primaryColor,
+            primary: AppStyle.primaryColor,
+            secondary: AppStyle.secondaryColor,
+            surface: const Color(0xFFF8FAFC),
           ),
-        ),
-        // Rounded Buttons for friendliness
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
+          appBarTheme: AppBarTheme(
+            centerTitle: isTablet,
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black87,
             elevation: 0,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            titleTextStyle: TextStyle(
+              fontSize: isTablet ? 28 : 24,
+              fontWeight: FontWeight.w800,
+              color: Colors.black87,
+              letterSpacing: -0.5,
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              elevation: 0,
+              padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              textStyle: TextStyle(fontSize: isTablet ? 18 : 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.grey.shade100,
+            contentPadding: EdgeInsets.all(isTablet ? 20 : 16),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
           ),
         ),
-        // Soften Input decorations
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.grey.shade100,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-        ),
-      ),
-      home: dbMyAccount != null
-          ? ChatListScreen(myAccount: dbMyAccount!)
-          : (myAccount == null
-          ? AuthScreenNew(onLogin: _onLogin)
-          : ProfileSetupScreen(myAccount: myAccount!,isNewProfile: true,)),
-    );
+        home: dbMyAccount != null
+            ? ChatListScreen(myAccount: dbMyAccount!)
+            : (myAccount == null
+            ? AuthScreenNew(onLogin: _onLogin)
+            : ProfileSetupScreen(
+          myAccount: myAccount!,
+          isNewProfile: true,
+        )),
+      );
+    });
   }
 }

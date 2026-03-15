@@ -40,9 +40,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   final Color primaryColor = AppStyle.primaryColor;
   final Color secondaryColor = AppStyle.secondaryColor;
-  static double? screenWidth;
-  static double? screenHeight;
-  static MediaQueryData? _mediaQueryData;
 
   @override
   void initState() {
@@ -71,23 +68,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
   }
 
-  String getUserNameByContact(String contactNo) {
-    try {
-      final user = _recentChats.firstWhere((u) => u.contactNo == contactNo);
-      return user.name;
-    } catch (e) {
-      return contactNo;
-    }
-  }
-
   void _handleIncoming(ChatMessage message) async {
     if (!mounted) return;
-
     final isMe = message.senderId == widget.myAccount.contactNo;
     final isCurrentlyChatting = activeChatUser == message.senderId;
 
     if (!isMe && !isCurrentlyChatting) {
-      String displayName = getUserNameByContact(message.senderId);
+      String displayName = _getUserNameByContact(message.senderId);
       await saveLastMessage(
         message.senderId,
         displayName,
@@ -99,79 +86,103 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
   }
 
+  String _getUserNameByContact(String contactNo) {
+    try {
+      final user = _recentChats.firstWhere((u) => u.contactNo == contactNo);
+      return user.name;
+    } catch (e) {
+      return contactNo;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    _mediaQueryData = MediaQuery.of(context);
-    screenWidth = _mediaQueryData!.size.width;
-    screenHeight = _mediaQueryData!.size.height;
-
-    // Calculate responsive horizontal padding for the whole list
-    final horizontalPadding = screenWidth! / 25;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final bool isTablet = screenWidth > 600;
 
     final displayedUsers = _showSearch && _searchController.text.isNotEmpty
         ? _searchResults
         : _recentChats;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isTablet ? const Color(0xFFF1F5F9) : Colors.white,
       appBar: AppBar(
-        // Responsive AppBar height based on width
-        // toolbarHeight: (screenHeight! / 5).clamp(70.0, 100.0),
+        toolbarHeight: isTablet ? 100 : 70,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        flexibleSpace: _buildUniqueHeader(),
+        flexibleSpace: _buildUniqueHeader(screenWidth, isTablet),
         automaticallyImplyLeading: false,
       ),
-      body: GestureDetector(
-        onTap: () {
-          if (_showSearch) {
-            setState(() {
-              _showSearch = false;
-              _searchResults.clear();
-              _searchController.clear();
-            });
-          }
-          FocusScope.of(context).unfocus();
-        },
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                color: const Color(0xFFF8F9FD),
-                child: _isSearching
-                    ? Center(
-                        child: CircularProgressIndicator(color: primaryColor),
-                      )
-                    : displayedUsers.isEmpty
-                    ? SingleChildScrollView(child: _buildEmptyState())
-                    : ListView.builder(
-                        // Responsive bottom padding for FAB clearance
-                        padding: EdgeInsets.only(
-                          top: 10,
-                          bottom: screenHeight! / 8,
-                        ),
-                        itemCount: displayedUsers.length,
-                        itemBuilder: (ctx, i) {
-                          return _buildSocialChatTile(
-                            displayedUsers[i],
-                            screenWidth,
-                          );
-                        },
-                      ),
-              ),
+      body: Center(
+        child: Container(
+          // CONSTRAINT: Limits width on tablets for a professional look
+          constraints: BoxConstraints(
+            maxWidth: isTablet ? 700 : double.infinity,
+          ),
+          child: GestureDetector(
+            onTap: () {
+              if (_showSearch) {
+                setState(() {
+                  _showSearch = false;
+                  _searchResults.clear();
+                  _searchController.clear();
+                });
+              }
+              FocusScope.of(context).unfocus();
+            },
+            child: Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F9FD),
+                      borderRadius: isTablet
+                          ? const BorderRadius.vertical(
+                              top: Radius.circular(30),
+                            )
+                          : null,
+                    ),
+                    child: _isSearching
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: primaryColor,
+                            ),
+                          )
+                        : (displayedUsers.isEmpty)
+                        ? _buildEmptyState(screenWidth, screenHeight, isTablet)
+                        : ListView.builder(
+                            padding: EdgeInsets.only(
+                              top: 15,
+                              bottom: 100,
+                              left: isTablet ? 10 : 0,
+                              right: isTablet ? 10 : 0,
+                            ),
+                            itemCount: displayedUsers.length,
+                            itemBuilder: (ctx, i) {
+                              return _buildSocialChatTile(
+                                displayedUsers[i],
+                                screenWidth,
+                                isTablet,
+                              );
+                            },
+                          ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
-      floatingActionButton: _buildFab(),
+      floatingActionButton: _buildFab(screenWidth, isTablet),
     );
   }
 
-  Widget _buildUniqueHeader() {
+  Widget _buildUniqueHeader(double screenWidth, bool isTablet) {
     return Stack(
       children: [
         Container(
-          height: screenWidth! / 2,
+          height: isTablet ? 200 : screenWidth / 2,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [primaryColor, secondaryColor],
@@ -181,35 +192,36 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
         ),
         Positioned(
-          top: -screenWidth! / 10,
-          left: -screenWidth! / 10,
+          top: -screenWidth / 10,
+          left: -screenWidth / 10,
           child: CircleAvatar(
-            radius: screenWidth! / 5,
-            backgroundColor: Colors.white.withValues(alpha: 0.1),
+            radius: isTablet ? 120 : screenWidth / 5,
+            backgroundColor: Colors.white.withOpacity(0.1),
           ),
         ),
         SafeArea(
           child: Padding(
-            // Responsive horizontal padding
             padding: EdgeInsets.symmetric(
-              horizontal: screenWidth! / 20,
+              horizontal: isTablet ? 40 : screenWidth / 20,
               vertical: 10,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _showSearch
-                    ? _buildSearchField()
+                    ? _buildSearchField(screenWidth, isTablet)
                     : Text(
                         "Messages",
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: ScreenUtil().getAdaptiveSize(context, 16),
+                          fontSize: isTablet
+                              ? 32
+                              : ScreenUtil().getAdaptiveSize(context, 26),
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1,
                         ),
                       ),
-                _buildHeaderActions(),
+                _buildHeaderActions(isTablet),
               ],
             ),
           ),
@@ -218,60 +230,48 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildSocialChatTile(User user, double? screenWidth) {
+  Widget _buildSocialChatTile(User user, double screenWidth, bool isTablet) {
     final lastMsg = user.lastMessage ?? "Say hi! 👋";
     final isImage = CommonUtil.isBase64(lastMsg);
-    // Dynamic Avatar Size
-    final double avatarRadius = (screenWidth! / 14).clamp(25.0, 35.0);
+    final double avatarRadius = isTablet
+        ? 35
+        : (screenWidth / 14).clamp(25.0, 35.0);
 
     return Container(
-      // Responsive margins
       margin: EdgeInsets.symmetric(
-        horizontal: screenWidth / 25,
-        vertical: screenHeight! / 120,
+        horizontal: isTablet ? 15 : screenWidth / 25,
+        vertical: 6,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: ListTile(
         onTap: () => _openChat(user),
-        contentPadding: EdgeInsets.all(screenWidth / 35),
+        contentPadding: EdgeInsets.all(isTablet ? 15 : screenWidth / 35),
         leading: Stack(
           children: [
-            Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: user.online ? Colors.greenAccent : Colors.transparent,
-                  width: 2,
-                ),
-              ),
-              child: CircleAvatar(
-                radius: avatarRadius,
-                backgroundColor: Colors.grey.shade100,
-                backgroundImage: NetworkImage(
-                  "${Environment.hostApiUrl}/uploads/profiles/${user.contactNo!}.gif",
-                ),
-                onBackgroundImageError: (_, __) =>
-                    Logger.log("chat_list_screen", "Image error"),
+            CircleAvatar(
+              radius: avatarRadius,
+              backgroundColor: Colors.grey.shade100,
+              backgroundImage: NetworkImage(
+                "${Environment.hostApiUrl}/uploads/profiles/${user.contactNo!}.gif",
               ),
             ),
             if (user.online)
               Positioned(
-                right: 2,
-                bottom: 2,
+                right: 0,
+                bottom: 0,
                 child: Container(
-                  width: avatarRadius / 2,
-                  height: avatarRadius / 2,
+                  width: 14,
+                  height: 14,
                   decoration: BoxDecoration(
                     color: Colors.greenAccent,
                     shape: BoxShape.circle,
@@ -285,20 +285,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
           user.name,
           style: TextStyle(
             fontWeight: FontWeight.w800,
-            fontSize: ScreenUtil().getAdaptiveSize(context, 17),
+            fontSize: isTablet ? 18 : ScreenUtil().getAdaptiveSize(context, 17),
           ),
         ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            isImage ? "📷 Image" : lastMsg,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: ScreenUtil().getAdaptiveSize(context, 14),
-              fontWeight: FontWeight.w500,
-            ),
+        subtitle: Text(
+          isImage ? "📷 Image" : lastMsg,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: isTablet ? 15 : ScreenUtil().getAdaptiveSize(context, 14),
           ),
         ),
         trailing: Column(
@@ -307,29 +302,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
           children: [
             Text(
               user.timestamp != null
-                  ? CommonUtil().formatTimestamp(user.timestamp ?? 0)
+                  ? CommonUtil().formatTimestamp(user.timestamp!)
                   : "",
               style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: ScreenUtil().getAdaptiveSize(context, 11),
-                fontWeight: FontWeight.bold,
+                fontSize: isTablet ? 13 : 11,
+                color: Colors.grey,
               ),
             ),
-            const SizedBox(height: 5),
             if ((user.unreadCount ?? 0) > 0)
               Container(
+                margin: const EdgeInsets.only(top: 5),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [primaryColor, Colors.redAccent],
-                  ),
+                  color: primaryColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   "${user.unreadCount}",
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
-                    fontSize: ScreenUtil().getAdaptiveSize(context, 10),
+                    fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -340,20 +332,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildSearchField() {
+  Widget _buildSearchField(double screenWidth, bool isTablet) {
     return Expanded(
       child: Container(
-        height: (screenWidth! / 8).clamp(45.0, 55.0),
+        height: isTablet ? 60 : 50,
         padding: const EdgeInsets.symmetric(horizontal: 15),
         decoration: BoxDecoration(
-          color: Colors.white, // Solid white for better readability in search
+          color: Colors.white,
           borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
         ),
         child: Center(
           child: TextField(
@@ -365,13 +352,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
             style: TextStyle(
               color: primaryColor,
               fontWeight: FontWeight.bold,
-              fontSize: ScreenUtil().getAdaptiveSize(context, 16),
+              fontSize: isTablet ? 18 : 16,
             ),
             decoration: InputDecoration(
               hintText: 'Find friends...',
               counterText: "",
               isDense: true,
-              hintStyle: TextStyle(color: Colors.grey.shade400),
               border: InputBorder.none,
             ),
           ),
@@ -380,9 +366,37 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildFab() {
+  void _onSearchChanged(String query) {
+    if (query.isNotEmpty) {
+      if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+        _searchUsers(query);
+      });
+    }
+  }
+
+  Future<void> _searchUsers(String query) async {
+    setState(() => _isSearching = true);
+    try {
+      final response = await http.get(
+        Uri.parse('${Environment.hostApiUrl}/api/users/search?query=$query'),
+      );
+      if (response.statusCode == 200 && mounted) {
+        final List data = jsonDecode(response.body);
+        setState(
+          () => _searchResults = data.map((e) => User.fromJson(e)).toList(),
+        );
+      }
+    } catch (e) {
+      Logger.log("chat_list_screen", "Search Error: $e");
+    } finally {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  Widget _buildFab(double screenWidth, bool isTablet) {
     return Container(
-      height: (screenWidth! / 7).clamp(50.0, 65.0),
+      height: isTablet ? 65 : 55,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [primaryColor, const Color(0xFFFF4D4D)],
@@ -390,7 +404,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withValues(alpha: 0.4),
+            color: primaryColor.withOpacity(0.4),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -403,51 +417,41 @@ class _ChatListScreenState extends State<ChatListScreen> {
         icon: Icon(
           Icons.add_comment_rounded,
           color: Colors.white,
-          size: ScreenUtil().getAdaptiveSize(context, 20),
+          size: isTablet ? 28 : 24,
         ),
         label: Text(
           "NEW CHAT",
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,
-            fontSize: ScreenUtil().getAdaptiveSize(context, 10),
-            letterSpacing: 1,
+            fontSize: isTablet ? 16 : 12,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Container(
-      // Centers the empty state in the middle of the remaining screen height
-      height: screenHeight! - (screenWidth! / 3) - 100,
-      width: double.infinity,
-      alignment: Alignment.center,
+  Widget _buildEmptyState(
+    double screenWidth,
+    double screenHeight,
+    bool isTablet,
+  ) {
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.forum_outlined,
-            size: screenWidth! / 4,
-            color: primaryColor.withValues(alpha: 0.2),
+            size: isTablet ? 150 : 80,
+            color: primaryColor.withOpacity(0.1),
           ),
-          SizedBox(height: screenHeight! / 40),
+          const SizedBox(height: 20),
           Text(
             "No Conversations",
             style: TextStyle(
-              fontSize: ScreenUtil().getAdaptiveSize(context, 24),
+              fontSize: isTablet ? 28 : 22,
               fontWeight: FontWeight.w900,
-              color: Colors.grey.shade400,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Start a chat with your friends!",
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: ScreenUtil().getAdaptiveSize(context, 14),
-              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade300,
             ),
           ),
         ],
@@ -455,14 +459,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildHeaderActions() {
+  Widget _buildHeaderActions(bool isTablet) {
     return Row(
       children: [
         IconButton(
           icon: Icon(
             _showSearch ? Icons.close : Icons.search,
             color: Colors.white,
-            size: ScreenUtil().getAdaptiveSize(context, 18),
+            size: isTablet ? 30 : 24,
           ),
           onPressed: () => setState(() {
             _showSearch = !_showSearch;
@@ -476,43 +480,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
           icon: Icon(
             Icons.more_vert_rounded,
             color: Colors.white,
-            size: ScreenUtil().getAdaptiveSize(context, 16),
+            size: isTablet ? 30 : 24,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          onSelected: (value) => _handleMenuSelection(value),
+          onSelected: (val) => _handleMenuSelection(val),
           itemBuilder: (ctx) => [
-            PopupMenuItem(
+            const PopupMenuItem(
               value: "settings",
-              child: Text(
-                "Profile Settings",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: ScreenUtil().getAdaptiveSize(context, 10),
-                ),
-              ),
+              child: Text("Profile Settings"),
             ),
-            PopupMenuItem(
-              value: "refresh",
-              child: Text(
-                "Delete Chats",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: ScreenUtil().getAdaptiveSize(context, 10),
-                ),
-              ),
-            ),
-            PopupMenuItem(
+            const PopupMenuItem(value: "refresh", child: Text("Delete Chats")),
+            const PopupMenuItem(
               value: "logout",
-              child: Text(
-                "Logout",
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: ScreenUtil().getAdaptiveSize(context, 10),
-                ),
-              ),
+              child: Text("Logout", style: TextStyle(color: Colors.red)),
             ),
           ],
         ),
@@ -532,17 +511,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
       );
     } else if (value == 'logout') {
+      // Inside ChatListScreen logout logic
+      _repo.clearMyAccount();
       _repo.disconnect();
-      await _repo.clearMyAccount();
-      await _repo.clearRecentChats();
 
-      Navigator.pushAndRemoveUntil(
-        context,
+      // Navigate back to ChatApp, which will now re-run _checkAndSetAccount
+      // and find no account, showing the AuthScreen.
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const ChatApp()),
         (route) => false,
       );
     } else if (value == 'refresh') {
-      // _de
       _repo.clearRecentChats();
       _loadRecentChats();
     }
@@ -561,74 +540,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Future<void> showNotification(ChatMessage message, String displayName) async {
-    Logger.log(
-      "chat_list_screen",
-      "🔔 Attempting to show notification for: ${message.senderId}",
+    const androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      'chat_messages_channel',
+      'Chat Messages',
+      importance: Importance.max,
+      priority: Priority.high,
     );
-
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-          'chat_messages_channel',
-          'Chat Messages',
-          channelDescription: 'Notifications for new friendship chats',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: true,
-          ticker: 'ticker',
-          enableVibration: true,
-          playSound: true,
-        );
-
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+    const platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
     );
-
-    String notificationBody = CommonUtil.isBase64(message.content)
-        ? "📷 Sent an image"
-        : (message.content);
-
-    try {
-      await flutterLocalNotificationsPlugin.show(
-        message.id.hashCode,
-        displayName,
-        notificationBody,
-        platformChannelSpecifics,
-      );
-    } catch (e) {
-      Logger.log("chat_list_screen", "❌ Notification Error: $e");
-    }
-  }
-
-  void _onSearchChanged(String query) {
-    if (query.isNotEmpty && query != widget.myAccount.contactNo) {
-      if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
-      _searchDebounce = Timer(const Duration(milliseconds: 500), () {
-        _searchUsers(query);
-      });
-    }
-  }
-
-  Future<void> _searchUsers(String query) async {
-    if (query.length < 2) {
-      setState(() => _searchResults = []);
-      return;
-    }
-    setState(() => _isSearching = true);
-    try {
-      final response = await http.get(
-        Uri.parse('${Environment.hostApiUrl}/api/users/search?query=$query'),
-      );
-      if (response.statusCode == 200 && mounted) {
-        final List data = jsonDecode(response.body);
-        setState(
-          () => _searchResults = data.map((e) => User.fromJson(e)).toList(),
-        );
-      }
-    } catch (e) {
-      Logger.log("chat_list_screen", "Search Error: $e");
-    } finally {
-      if (mounted) setState(() => _isSearching = false);
-    }
+    await flutterLocalNotificationsPlugin.show(
+      message.id.hashCode,
+      displayName,
+      message.content,
+      platformChannelSpecifics,
+    );
   }
 
   Future<void> saveLastMessage(

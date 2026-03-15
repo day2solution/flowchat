@@ -7,7 +7,7 @@ import 'package:flowchat/models/my_account.dart';
 import 'package:flowchat/models/recent_chat.dart';
 import 'package:flowchat/services/chat_db.dart';
 import 'package:flowchat/util/CommonUtil.dart';
-import 'package:flowchat/util/ScreenUtil.dart'; // Added ScreenUtil
+import 'package:flowchat/util/ScreenUtil.dart';
 import '../models/chat_message.dart';
 import '../models/user.dart';
 import '../services/chat_repository.dart';
@@ -30,11 +30,6 @@ class _ChatScreenState extends State<ChatScreen> {
   List<ChatMessage> _messages = [];
   bool _peerTyping = false;
 
-  // Responsive properties
-  late double screenWidth;
-  late double screenHeight;
-
-  // --- Theme Colors ---
   final Color coralColor = const Color(0xFFFF7F50);
   final Color purpleColor = const Color(0xFF6C63FF);
 
@@ -51,7 +46,6 @@ class _ChatScreenState extends State<ChatScreen> {
     WebSocketService().onTyping(_handleTyping);
   }
 
-  // --- Logic Implementations (Same as yours) ---
   Future<void> _loadMessages() async {
     final msgs = await _repo.loadMessages(widget.peer.contactNo ?? "");
     if (mounted) setState(() => _messages = msgs);
@@ -110,97 +104,87 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    screenWidth = MediaQuery.of(context).size.width;
-    screenHeight = MediaQuery.of(context).size.height;
-    screenWidth = screenHeight > screenWidth ? screenHeight : screenWidth;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isTablet = screenWidth > 600;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isTablet ? const Color(0xFFF1F5F9) : Colors.white,
       appBar: AppBar(
-        // toolbarHeight: (screenHeight / 14),
+        toolbarHeight: isTablet ? 90 : 70,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        flexibleSpace: _buildUniqueHeader(),
+        flexibleSpace: _buildUniqueHeader(screenWidth, isTablet),
         automaticallyImplyLeading: false,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Container(
-              color: const Color(0xFFF8F9FD),
-              child: ListView.builder(
-                controller: _scrollController,
-                reverse: true,
-                padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.04,
-                  vertical: 10,
-                ),
-                itemCount: _messages.length,
-                itemBuilder: (ctx, i) {
-                  final message = _messages[_messages.length - 1 - i];
-                  return _buildSocialMessageBubble(message);
-                },
-              ),
-            ),
+      body: Center(
+        child: Container(
+          // CONSTRAINT: Limit chat width on tablets for readability
+          constraints: BoxConstraints(maxWidth: isTablet ? 800 : double.infinity),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FD),
+            boxShadow: isTablet ? [BoxShadow(color: Colors.black12, blurRadius: 20)] : null,
           ),
-          if (_peerTyping &&
-              widget.peer.contactNo != widget.myAccount.contactNo)
-            Padding(
-              padding: const EdgeInsets.only(left: 15, bottom: 5),
-              child: TypingIndicator(),
-            ),
-          Composer(onSend: _send, onTyping: _onTyping),
-        ],
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  reverse: true,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isTablet ? 30 : screenWidth * 0.04,
+                    vertical: 15,
+                  ),
+                  itemCount: _messages.length,
+                  itemBuilder: (ctx, i) {
+                    final message = _messages[_messages.length - 1 - i];
+                    return _buildSocialMessageBubble(message, screenWidth, isTablet);
+                  },
+                ),
+              ),
+              if (_peerTyping && widget.peer.contactNo != widget.myAccount.contactNo)
+                const Padding(
+                  padding: EdgeInsets.only(left: 20, bottom: 10),
+                  child: Align(alignment: Alignment.centerLeft, child: TypingIndicator()),
+                ),
+              // Composer constrained by the parent Container width
+              Composer(onSend: _send, onTyping: _onTyping),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildUniqueHeader() {
+  Widget _buildUniqueHeader(double screenWidth, bool isTablet) {
     return Stack(
       children: [
         Container(
-          // height: screenWidth / 3,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [purpleColor, coralColor],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(50),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(isTablet ? 80 : 50),
             ),
-          ),
-        ),
-        Positioned(
-          top: -screenWidth * 0.1,
-          right: -screenWidth * 0.1,
-          child: CircleAvatar(
-            radius: screenWidth * 0.15,
-            backgroundColor: Colors.white.withValues(alpha: 0.1),
           ),
         ),
         SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: EdgeInsets.symmetric(horizontal: isTablet ? 20 : 10),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: isTablet ? 24 : 20),
                   onPressed: () => Navigator.pop(context),
                 ),
-                _buildHeaderAvatar(),
+                _buildHeaderAvatar(isTablet),
                 const SizedBox(width: 12),
-                _buildHeaderTitle(),
+                _buildHeaderTitle(isTablet),
                 IconButton(
                   onPressed: () {},
-                  icon: const Icon(
-                    Icons.more_vert_rounded,
-                    color: Colors.white,
-                  ),
+                  icon: Icon(Icons.more_vert_rounded, color: Colors.white, size: isTablet ? 28 : 24),
                 ),
               ],
             ),
@@ -210,25 +194,19 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildHeaderAvatar() {
-    final double radius = (screenWidth * 0.055).clamp(20, 25);
+  Widget _buildHeaderAvatar(bool isTablet) {
     return Container(
       padding: const EdgeInsets.all(2),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
+      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
       child: CircleAvatar(
-        radius: radius,
+        radius: isTablet ? 28 : 22,
         backgroundColor: Colors.grey.shade100,
-        backgroundImage: NetworkImage(
-          "${Environment.hostApiUrl}/uploads/profiles/${widget.peer.contactNo!}.gif",
-        ),
+        backgroundImage: NetworkImage("${Environment.hostApiUrl}/uploads/profiles/${widget.peer.contactNo!}.gif"),
       ),
     );
   }
 
-  Widget _buildHeaderTitle() {
+  Widget _buildHeaderTitle(bool isTablet) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,7 +218,7 @@ class _ChatScreenState extends State<ChatScreen> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: Colors.white,
-              fontSize: ScreenUtil().getAdaptiveSize(context, 10),
+              fontSize: isTablet ? 20 : ScreenUtil().getAdaptiveSize(context, 16),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -249,8 +227,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? "typing..."
                 : (widget.peer.online ? "Online" : "Offline"),
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
-              fontSize: ScreenUtil().getAdaptiveSize(context, 6),
+              color: Colors.white.withOpacity(0.8),
+              fontSize: isTablet ? 14 : ScreenUtil().getAdaptiveSize(context, 12),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -259,7 +237,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildSocialMessageBubble(ChatMessage message) {
+  Widget _buildSocialMessageBubble(ChatMessage message, double screenWidth, bool isTablet) {
     final bool isMe = message.senderId == widget.myAccount.contactNo;
     final bool isImage = CommonUtil.isBase64(message.content);
 
@@ -269,15 +247,13 @@ class _ChatScreenState extends State<ChatScreen> {
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: isImage
             ? const EdgeInsets.all(5)
-            : EdgeInsets.symmetric(
-                horizontal: screenWidth * 0.01,
-                vertical: 12,
-              ),
-        constraints: BoxConstraints(maxWidth: screenWidth * 0.78),
+            : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        constraints: BoxConstraints(
+          // Tablet constraint: bubbles don't take up more than 60% of the constrained container
+          maxWidth: isTablet ? 450 : screenWidth * 0.75,
+        ),
         decoration: BoxDecoration(
-          gradient: isMe
-              ? LinearGradient(colors: [coralColor, const Color(0xFFFF4D4D)])
-              : null,
+          gradient: isMe ? LinearGradient(colors: [coralColor, const Color(0xFFFF4D4D)]) : null,
           color: isMe ? null : Colors.white,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(22),
@@ -287,9 +263,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: isMe
-                  ? coralColor.withValues(alpha: 0.2)
-                  : Colors.black.withValues(alpha: 0.05),
+              color: isMe ? coralColor.withOpacity(0.2) : Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -299,38 +273,27 @@ class _ChatScreenState extends State<ChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             GestureDetector(
-              onTap: isImage
-                  ? () => showImageDialog(
-                      message.content,
-                      "Photo",
-                      context,
-                      "image",
-                    )
-                  : null,
+              onTap: isImage ? () => showImageDialog(message.content, context) : null,
               child: isImage
                   ? ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: CommonUtil.getImage(message.content, context),
-                    )
+                borderRadius: BorderRadius.circular(18),
+                child: CommonUtil.getImage(message.content, context),
+              )
                   : Text(
-                      message.content,
-                      style: TextStyle(
-                        color: isMe ? Colors.white : Colors.black87,
-                        fontSize: ScreenUtil().getAdaptiveSize(context, 15),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                message.content,
+                style: TextStyle(
+                  color: isMe ? Colors.white : Colors.black87,
+                  fontSize: isTablet ? 17 : ScreenUtil().getAdaptiveSize(context, 15),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  DateFormat('hh:mm a').format(
-                    DateTime.fromMillisecondsSinceEpoch(
-                      message.timestamp.millisecondsSinceEpoch,
-                    ),
-                  ),
+                  DateFormat('hh:mm a').format(DateTime.fromMillisecondsSinceEpoch(message.timestamp.millisecondsSinceEpoch)),
                   style: TextStyle(
                     fontSize: 10,
                     color: isMe ? Colors.white70 : Colors.grey,
@@ -347,12 +310,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void showImageDialog(
-    String imagePath,
-    String? imageName,
-    BuildContext context,
-    String fileType,
-  ) {
+  void showImageDialog(String imagePath, BuildContext context) {
     showDialog(
       context: context,
       useRootNavigator: true,
@@ -371,7 +329,7 @@ class _ChatScreenState extends State<ChatScreen> {
               top: MediaQuery.of(context).padding.top + 10,
               right: 20,
               child: CircleAvatar(
-                backgroundColor: Colors.black.withValues(alpha: 0.4),
+                backgroundColor: Colors.black.withOpacity(0.4),
                 child: IconButton(
                   icon: const Icon(Icons.close_rounded, color: Colors.white),
                   onPressed: () => Navigator.of(dialogContext).pop(),
@@ -385,23 +343,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildStatusIcon(String status) {
-    // Branding: Use White for 'Me' bubbles, Purple for 'Read' in Peer bubbles
-    // Since this is ONLY called if(isMe) in your logic, we use white variants
     switch (status) {
       case 'SENT':
         return const Icon(Icons.done_rounded, size: 14, color: Colors.white70);
       case 'DELIVERED':
-        return const Icon(
-          Icons.done_all_rounded,
-          size: 14,
-          color: Colors.white70,
-        );
+        return const Icon(Icons.done_all_rounded, size: 14, color: Colors.white70);
       case 'READ':
-        return const Icon(
-          Icons.done_all_rounded,
-          size: 14,
-          color: Colors.white,
-        );
+        return const Icon(Icons.done_all_rounded, size: 14, color: Colors.blueAccent);
       default:
         return const SizedBox.shrink();
     }
