@@ -302,7 +302,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           children: [
             Text(
               user.timestamp != null
-                  ? CommonUtil().formatTimestamp(user.timestamp!)
+                  ? CommonUtil.formatTimestamp(user.timestamp!)
                   : "",
               style: TextStyle(
                 fontSize: isTablet ? 13 : 11,
